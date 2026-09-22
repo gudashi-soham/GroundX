@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ ground.name }} - Real-Time Slot Booking{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper detail-screen">
+    <!-- Back Button Bar -->
+    <div class="detail-top-nav">
+        <a href="{% url 'search' %}" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Back to Grounds</a>
+        <span class="detail-distance-badge"><i class="fa-solid fa-location-crosshairs"></i> {{ distance_km }} km away</span>
+    </div>
+
+    <!-- Ground Hero Image & Badges -->
+    <div class="detail-hero-card">
+        <img src="{{ ground.get_display_image }}" alt="{{ ground.name }}" class="detail-hero-img">
+        <div class="hero-overlay-content">
+            {% if ground.badge %}
+            <span class="status-ribbon ribbon-{{ ground.badge|slugify }}">{{ ground.badge }}</span>
+            {% endif %}
+            <div class="detail-rating-pill">
+                <i class="fa-solid fa-star"></i> {{ ground.rating }} ({{ ground.reviews_count }} reviews)
+            </div>
+        </div>
+    </div>
+
+    <!-- Ground Info Section -->
+    <div class="detail-info-card">
+        <h1 class="detail-title">{{ ground.name }}</h1>
+        <p class="detail-address"><i class="fa-solid fa-location-dot"></i> {{ ground.address }}, {{ ground.city }}</p>
+        <p class="detail-tagline">{{ ground.tagline }}</p>
+
+        <!-- Court Formats & Amenities -->
+        <div class="detail-amenities-section">
+            <h4>Court Formats & Features</h4>
+            <div class="format-tags-row">
+                {% for fmt in ground.get_court_format_list %}
+                <span class="format-pill"><i class="fa-solid fa-check"></i> {{ fmt }}</span>
+                {% endfor %}
+            </div>
+            
+            <h4 style="margin-top: 14px;">Facilities & Amenities</h4>
+            <div class="amenities-grid">
+                {% for a in ground.get_amenities_list %}
+                <div class="amenity-chip">
+                    <i class="fa-solid fa-circle-check"></i> {{ a }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="detail-description">
+            <h4>Description</h4>
+            <p>{{ ground.description }}</p>
+        </div>
+    </div>
+
+    <!-- Real-Time Slot Booking Matrix -->
+    <div class="slot-booking-card">
+        <div class="booking-section-header">
+            <h3><i class="fa-solid fa-bolt" style="color: #10B981;"></i> Real-Time Slot Availability</h3>
+            <span class="live-pulse-badge"><span class="pulse-dot"></span> Live Sync</span>
+        </div>
+        <p class="booking-guide-text">Select your preferred date and available hour. Slots refresh in real time.</p>
+
+        <!-- Date Selector Chips (Today, Tomorrow, etc.) -->
+        <div class="date-chips-row">
+            {% for chip in date_chips %}
+            <a href="?date={{ chip.date }}" class="date-chip {% if chip.is_selected %}active{% endif %}">
+                <span class="day-label">{{ chip.day_name }}</span>
+                <span class="date-label">{{ chip.display_date }}</span>
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Booking Form -->
+        <form action="{% url 'book_slot' ground.id %}" method="POST" id="slotBookingForm">
+            {% csrf_token %}
+            <input type="hidden" name="booking_date" value="{{ booking_date }}">
+            <input type="hidden" name="slot_id" id="selectedSlotInput" value="">
+
+            <!-- Sport Choice -->
+            <div class="sport-select-group">
+                <label class="form-label-bold">Select Sport:</label>
+                <div class="sport-radios-row">
+                    {% for sport in sports %}
+                    <label class="sport-radio-label">
+                        <input type="radio" name="sport_id" value="{{ sport.id }}" {% if forloop.first %}checked{% endif %}>
+                        <span class="sport-radio-pill">{{ sport.name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Slots Matrix -->
+            <div class="slots-matrix-container">
+                <label class="form-label-bold">Available Time Slots for {{ booking_date }}:</label>
+                <div class="slots-grid">
+                    {% for s in slots_data %}
+                    <button type="button" 
+                            class="slot-btn {% if s.is_booked %}booked{% else %}available{% endif %}"
+                            data-slot-id="{{ s.slot.id }}"
+                            {% if s.is_booked %}disabled title="Already booked by another player"{% endif %}>
+                        <span class="slot-time">{{ s.slot.slot_label }}</span>
+                        <span class="slot-status-text">
+                            {% if s.is_booked %}
+                                <i class="fa-solid fa-lock"></i> Booked
+                            {% else %}
+                                <i class="fa-solid fa-circle-check"></i> Available
+                            {% endif %}
+                        </span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Selected Slot Summary & Checkout Box -->
+            <div class="booking-summary-bar" id="bookingSummaryBar">
+                <div class="summary-details">
+                    <div class="sum-slot-name" id="sumSlotLabel">Select a slot above</div>
+                    <div class="sum-rate">Total: <strong>₹{{ ground.hourly_rate|floatformat:0 }}</strong></div>
+                </div>
+                {% if user.is_authenticated %}
+                <button type="submit" class="btn-confirm-booking" id="btnSubmitBooking" disabled>
+                    <i class="fa-solid fa-bolt"></i> Confirm & Book Now
+                </button>
+                {% else %}
+                <a href="{% url 'login' %}?next={{ request.path }}" class="btn-confirm-booking">
+                    Log in to Book Slot
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

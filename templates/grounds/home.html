@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}GroundX - Find Your Perfect Pitch{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper">
+    <!-- Top Location Selector Bar (Matching Screenshot 1) -->
+    <div class="location-header-bar">
+        <div class="loc-dropdown-wrapper">
+            <i class="fa-solid fa-location-dot loc-icon"></i>
+            <div class="loc-text-col">
+                <span class="loc-subtext">Location</span>
+                <div class="loc-select-custom" id="locPickerBtn">
+                    <span id="currentLocDisplay">{{ current_city }}</span>
+                    <i class="fa-solid fa-chevron-down loc-arrow"></i>
+                </div>
+            </div>
+        </div>
+        <div class="loc-actions">
+            <button class="btn-gps-detect" id="btnDetectGps" title="Detect GPS Location">
+                <i class="fa-solid fa-crosshairs"></i> Nearby
+            </button>
+            <a href="{% url 'search' %}" class="header-search-icon" title="Search Grounds">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Location Modal Popup -->
+    <div class="location-modal-backdrop" id="locationModal">
+        <div class="location-modal-card">
+            <div class="modal-header">
+                <h3>Select Your City</h3>
+                <button type="button" class="modal-close" id="closeLocModal">&times;</button>
+            </div>
+            <div class="modal-cities-list">
+                <a href="?city=kolhapur" class="city-item {% if current_city == 'Kolhapur' %}active{% endif %}">
+                    <i class="fa-solid fa-city"></i> Kolhapur (Maharashtra)
+                </a>
+                <a href="?city=london" class="city-item {% if current_city == 'London' %}active{% endif %}">
+                    <i class="fa-solid fa-building-columns"></i> London (UK)
+                </a>
+                <a href="?city=pune" class="city-item {% if current_city == 'Pune' %}active{% endif %}">
+                    <i class="fa-solid fa-tree-city"></i> Pune
+                </a>
+                <a href="?city=mumbai" class="city-item {% if current_city == 'Mumbai' %}active{% endif %}">
+                    <i class="fa-solid fa-water"></i> Mumbai
+                </a>
+            </div>
+            <button class="btn-use-gps" id="modalGpsBtn">
+                <i class="fa-solid fa-location-crosshairs"></i> Use Live GPS Coordinates
+            </button>
+        </div>
+    </div>
+
+    <!-- Hero Banner (Matching Screenshot 1) -->
+    <section class="hero-section">
+        <h1 class="hero-title">Find your perfect pitch, <br><span class="hero-highlight">book in seconds.</span></h1>
+        <p class="hero-subtitle">Discover top-rated turf grounds in {{ current_city }} for cricket, football, and more.</p>
+        
+        <!-- Search Input Bar (Matching Screenshot 1) -->
+        <form action="{% url 'search' %}" method="GET" class="search-bar-form">
+            <div class="search-input-box">
+                <i class="fa-solid fa-magnifying-glass search-lens"></i>
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search by name or sport..." class="search-input">
+                {% if search_query %}
+                    <a href="{% url 'home' %}" class="clear-search-btn"><i class="fa-solid fa-xmark"></i></a>
+                {% endif %}
+            </div>
+        </form>
+    </section>
+
+    <!-- Sports Filter Chips (Matching Screenshot 1) -->
+    <section class="sports-chips-section">
+        <h2 class="section-heading">Sports</h2>
+        <div class="sports-pill-scroll">
+            <a href="?sport=all{% if search_query %}&q={{ search_query }}{% endif %}" class="sport-pill {% if selected_sport == 'all' or not selected_sport %}active{% endif %}">
+                All Sports
+            </a>
+            {% for sport in sports %}
+            <a href="?sport={{ sport.slug }}{% if search_query %}&q={{ search_query }}{% endif %}" class="sport-pill {% if selected_sport == sport.slug %}active{% endif %}">
+                {% if sport.slug == 'cricket' %}
+                    <i class="fa-solid fa-baseball-bat-ball"></i>
+                {% elif sport.slug == 'football' %}
+                    <i class="fa-solid fa-futbol"></i>
+                {% elif sport.slug == 'tennis' %}
+                    <i class="fa-solid fa-table-tennis-paddle-ball"></i>
+                {% elif sport.slug == 'basketball' %}
+                    <i class="fa-solid fa-basketball"></i>
+                {% elif sport.slug == 'badminton' %}
+                    <i class="fa-solid fa-feather"></i>
+                {% else %}
+                    <span>{{ sport.emoji }}</span>
+                {% endif %}
+                {{ sport.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Featured Grounds Section (Matching Screenshot 1) -->
+    <section class="featured-grounds-section">
+        <div class="section-header-flex">
+            <h2 class="section-heading">Featured Grounds</h2>
+            <a href="{% url 'search' %}" class="see-all-link">See all ({{ all_grounds_count }})</a>
+        </div>
+
+        <div class="grounds-scroll-container">
+            {% for item in grounds %}
+            {% with g=item.instance dist=item.distance_km %}
+            <div class="ground-featured-card">
+                <!-- Card Image Area with Rating & Badges -->
+                <div class="ground-card-media">
+                    <img src="{{ g.get_display_image }}" alt="{{ g.name }}" class="ground-card-img" loading="lazy">
+                    <div class="rating-badge">
+                        <i class="fa-solid fa-star"></i> {{ g.rating }}
+                    </div>
+                    {% if g.badge %}
+                    <div class="status-ribbon ribbon-{{ g.badge|slugify }}">
+                        {{ g.badge }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Card Body -->
+                <div class="ground-card-body">
+                    <h3 class="ground-card-title">{{ g.name }}</h3>
+                    <div class="ground-card-location">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span>{{ g.address }} • <strong>{{ dist }} km</strong></span>
+                    </div>
+
+                    <!-- Sports & format tags -->
+                    <div class="ground-card-tags">
+                        {% for sport in g.sports.all %}
+                        <span class="tag-pill tag-sport">{{ sport.name|upper }}</span>
+                        {% endfor %}
+                        {% for fmt in g.get_court_format_list %}
+                        <span class="tag-pill tag-format">{{ fmt }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Price & CTA -->
+                    <div class="ground-card-footer">
+                        <div class="price-col">
+                            <span class="price-label">Starting from</span>
+                            <span class="price-val">₹{{ g.hourly_rate|floatformat:0 }}<small>/hr</small></span>
+                        </div>
+                        <div class="card-btn-group">
+                            <a href="{% url 'ground_detail' g.id %}" class="btn-card-details">View Details</a>
+                            <a href="{% url 'ground_detail' g.id %}" class="btn-card-book">Book Slot &rarr;</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% empty %}
+            <div class="empty-state-box">
+                <i class="fa-solid fa-futbol empty-icon"></i>
+                <p>No turf grounds found matching your filters in {{ current_city }}.</p>
+                <a href="{% url 'home' %}" class="btn-reset-filters">Reset Filters</a>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

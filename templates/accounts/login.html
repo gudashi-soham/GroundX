@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In - GroundX{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+    <div class="auth-brand-lockup">
+        <div class="auth-logo-icon"><i class="fa-solid fa-futbol"></i></div>
+        <div>
+            <span class="auth-brand-name">Ground<span>X</span></span>
+            <span class="auth-brand-subtitle">SPORTS BOOKING PORTAL</span>
+        </div>
+    </div>
+
+    <div class="auth-panel auth-panel-login">
+        <div class="auth-header">
+            <p class="auth-eyebrow">Welcome back</p>
+            <h1>Sign in to your account</h1>
+            <p>Manage your bookings and discover your next game.</p>
+        </div>
+
+        <form method="POST" class="auth-form">
+            {% csrf_token %}
+            <div class="form-field-group">
+                <label class="field-label" for="id_username">Username</label>
+                {{ form.username }}
+            </div>
+            <div class="form-field-group">
+                <div class="field-label-row"><label class="field-label" for="id_password">Password</label><a href="#" class="auth-muted-link">Forgot password?</a></div>
+                {{ form.password }}
+            </div>
+
+            {% if form.non_field_errors %}<div class="auth-errors">{{ form.non_field_errors }}</div>{% endif %}
+            <label class="remember-row"><input type="checkbox" name="remember_me"> <span>Keep me securely logged in</span></label>
+            <button type="submit" class="btn-primary-block auth-btn">Sign In <i class="fa-solid fa-arrow-right"></i></button>
+        </form>
+
+        <div class="auth-footer">
+            <span>New to GroundX?</span>
+            <a href="{% url 'register' %}" class="auth-link">Create an account</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

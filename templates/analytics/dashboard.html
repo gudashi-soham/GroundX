@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Owner Analytics - GroundX{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper wide-screen">
+    <div class="analytics-header">
+        <div>
+            <h2><i class="fa-solid fa-chart-pie" style="color: #10B981;"></i> Owner Analytics</h2>
+            <p class="sub-lead">Performance insights based on bookings, revenue, and ground usage.</p>
+        </div>
+        <div class="analytics-badge-tag">
+            <i class="fa-solid fa-chart-column"></i> Live Analytics
+        </div>
+    </div>
+
+    {% if analytics.has_data %}
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-green"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+            <div class="kpi-details">
+                <span class="kpi-label">Total Revenue</span>
+                <span class="kpi-value">₹{{ analytics.total_revenue }}</span>
+                <span class="kpi-sub">Avg ₹{{ analytics.avg_booking_price }}/booking</span>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-blue"><i class="fa-solid fa-calendar-check"></i></div>
+            <div class="kpi-details">
+                <span class="kpi-label">Total Bookings</span>
+                <span class="kpi-value">{{ analytics.total_bookings }}</span>
+                <span class="kpi-sub">Across {{ analytics.total_grounds }} grounds</span>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-emerald"><i class="fa-solid fa-trophy"></i></div>
+            <div class="kpi-details">
+                <span class="kpi-label">Most Booked Ground</span>
+                <span class="kpi-value-sm">{{ analytics.most_booked_ground }}</span>
+                <span class="kpi-sub highlight-badge">{{ analytics.most_booked_count }} Bookings</span>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon-wrap kpi-amber"><i class="fa-solid fa-fire"></i></div>
+            <div class="kpi-details">
+                <span class="kpi-label">Peak Booking Hour</span>
+                <span class="kpi-value-sm">{{ analytics.peak_slot }}</span>
+                <span class="kpi-sub">{{ analytics.peak_slot_count }} slot reservations</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="callout-card-analysis">
+        <div class="callout-icon"><i class="fa-solid fa-lightbulb"></i></div>
+        <div class="callout-content">
+            <h4>Ground Utilization Summary</h4>
+            <p>
+                <strong>Top Performing Ground:</strong> <span class="badge-tag-green">{{ analytics.most_booked_ground }} ({{ analytics.most_booked_count }} bookings)</span><br>
+                <strong>Needs Promotion:</strong> <span class="badge-tag-amber">{{ analytics.least_booked_ground }} ({{ analytics.least_booked_count }} bookings)</span>
+            </p>
+            <p class="callout-tip">Tip: Consider offering discount pricing for morning slots on <em>{{ analytics.least_booked_ground }}</em> to balance utilization.</p>
+        </div>
+    </div>
+
+    <div class="charts-grid-2">
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h4><i class="fa-solid fa-futbol"></i> Top Sports</h4>
+            </div>
+            <div class="chart-img-wrap">
+                <ul class="simple-metric-list">
+                    {% for sport, count in analytics.top_sports %}
+                    <li><span>{{ sport }}</span><strong>{{ count }}</strong></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h4><i class="fa-solid fa-calendar-week"></i> Recent 14-Day Trend</h4>
+            </div>
+            <div class="chart-img-wrap">
+                <ul class="simple-metric-list">
+                    {% for item in analytics.recent_trend %}
+                    <li><span>{{ item.date }}</span><strong>{{ item.count }}</strong></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="empty-state-box" style="margin-top: 30px;">
+        <i class="fa-solid fa-chart-simple empty-icon"></i>
+        <h3>No Booking Data Yet</h3>
+        <p>{{ analytics.message }}</p>
+        <div style="margin-top: 15px;">
+            <a href="{% url 'owner_dashboard' %}" class="btn-primary-sm">Go to Owner Dashboard</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

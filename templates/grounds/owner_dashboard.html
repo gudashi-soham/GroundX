@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Ground Owner Dashboard & Real-Time Monitor{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper wide-screen">
+    <div class="owner-header-row">
+        <div>
+            <h2><i class="fa-solid fa-tower-broadcast" style="color: #10B981;"></i> Real-Time Turf Monitor</h2>
+            <p class="sub-lead">Live booking status and schedule monitoring for today ({{ today|date:"l, M d, Y" }})</p>
+        </div>
+        <div class="owner-header-actions">
+            <a href="{% url 'add_ground' %}" class="btn-primary-sm"><i class="fa-solid fa-plus"></i> Add New Ground</a>
+            <a href="{% url 'owner_analytics' %}" class="btn-outline-sm"><i class="fa-solid fa-chart-line"></i> View Analytics</a>
+        </div>
+    </div>
+
+    <!-- Live Slot Occupancy Monitor Grid -->
+    <div class="card-section">
+        <div class="section-title-between">
+            <h3><i class="fa-solid fa-table-cells"></i> Today's Live Slot Occupancy Grid</h3>
+            <span class="live-pulse-badge"><span class="pulse-dot"></span> Live Real-Time Feed</span>
+        </div>
+
+        {% for item in monitor_grid %}
+        <div class="ground-monitor-card">
+            <div class="gm-header">
+                <div>
+                    <h4 class="gm-title">{{ item.ground.name }}</h4>
+                    <span class="gm-loc"><i class="fa-solid fa-location-dot"></i> {{ item.ground.address }}, {{ item.ground.city }}</span>
+                </div>
+                <div class="gm-stats">
+                    <span class="occ-badge">{{ item.occupied_count }} / {{ item.total_slots }} Slots Booked ({{ item.occupancy_pct }}% Occupied)</span>
+                    <a href="{% url 'edit_ground' item.ground.id %}" class="btn-edit-ground"><i class="fa-solid fa-pen-to-square"></i> Edit Ground</a>
+                </div>
+            </div>
+
+            <div class="gm-slots-grid">
+                {% for s in item.slots %}
+                <div class="gm-slot-cell {% if s.is_occupied %}occupied{% else %}free{% endif %}">
+                    <span class="gm-time">{{ s.slot.slot_label }}</span>
+                    <span class="gm-status-pill">
+                        {% if s.is_occupied %}
+                            <i class="fa-solid fa-user-check"></i> Booked
+                        {% else %}
+                            <i class="fa-solid fa-circle"></i> Available
+                        {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state-box">
+            <p>You have not added any grounds yet.</p>
+            <a href="{% url 'add_ground' %}" class="btn-primary-sm">Add Your First Turf Ground</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Today's Confirmed Bookings Table -->
+    <div class="card-section" style="margin-top: 24px;">
+        <h3><i class="fa-solid fa-list-check"></i> Today's Schedule ({{ todays_bookings|length }} Bookings)</h3>
+        
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>Ground</th>
+                        <th>Player Name</th>
+                        <th>Time Slot</th>
+                        <th>Sport</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in todays_bookings %}
+                    <tr>
+                        <td><strong>#{{ b.booking_id }}</strong></td>
+                        <td>{{ b.ground.name }}</td>
+                        <td>{{ b.player.username }} ({{ b.player.phone_number|default:"N/A" }})</td>
+                        <td><span class="slot-tag">{{ b.slot.slot_label }}</span></td>
+                        <td>{{ b.sport.name }}</td>
+                        <td>₹{{ b.total_price|floatformat:0 }}</td>
+                        <td><span class="badge-status badge-confirmed">Confirmed</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center" style="padding: 24px; color: #64748B;">No slots booked for today yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}My Bookings - GroundX{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper">
+    <div class="page-title-row">
+        <h2><i class="fa-solid fa-calendar-check" style="color: #10B981;"></i> My Bookings</h2>
+        <span class="counter-badge">{{ bookings|length }} Reservations</span>
+    </div>
+
+    <div class="bookings-list">
+        {% for b in bookings %}
+        <div class="booking-card card-status-{{ b.status|lower }}">
+            <div class="bcard-header">
+                <div class="bcard-id-col">
+                    <span class="b-id">#{{ b.booking_id }}</span>
+                    <span class="b-date-created">Booked on {{ b.created_at|date:"M d, Y" }}</span>
+                </div>
+                <span class="b-badge badge-{{ b.status|lower }}">{{ b.get_status_display }}</span>
+            </div>
+
+            <div class="bcard-body">
+                <h3 class="b-ground-name">{{ b.ground.name }}</h3>
+                <div class="b-info-line">
+                    <i class="fa-solid fa-calendar-day"></i>
+                    <span><strong>{{ b.booking_date|date:"l, M d, Y" }}</strong></span>
+                </div>
+                <div class="b-info-line">
+                    <i class="fa-regular fa-clock"></i>
+                    <span>{{ b.slot.slot_label }}</span>
+                </div>
+                <div class="b-info-line">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>{{ b.ground.address }}, {{ b.ground.city }}</span>
+                </div>
+                <div class="b-info-line">
+                    <i class="fa-solid fa-futbol"></i>
+                    <span>Sport: {{ b.sport.name }}</span>
+                </div>
+            </div>
+
+            <div class="bcard-footer">
+                <div class="b-price-col">
+                    <span class="b-price-sub">Paid</span>
+                    <span class="b-price-amt">₹{{ b.total_price|floatformat:0 }}</span>
+                </div>
+
+                {% if b.status == 'CONFIRMED' %}
+                <form action="{% url 'cancel_booking' b.booking_id %}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this booking?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-cancel-booking">Cancel Booking</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state-box">
+            <i class="fa-regular fa-calendar-xmark empty-icon"></i>
+            <h3>No Bookings Yet</h3>
+            <p>You haven't reserved any turf slots yet. Explore top grounds nearby and book your first pitch!</p>
+            <a href="{% url 'search' %}" class="btn-primary-sm" style="display:inline-block; margin-top:10px;">Explore Grounds</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

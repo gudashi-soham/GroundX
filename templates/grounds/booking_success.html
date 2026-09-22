@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Booking Confirmed - GroundX{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper">
+    <div class="success-card">
+        <div class="success-icon-wrap">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <h1 class="success-title">Pitch Slot Confirmed!</h1>
+        <p class="success-sub">Your slot has been reserved in real-time. Ground owner has been notified.</p>
+
+        <div class="ticket-box">
+            <div class="ticket-header">
+                <span class="ticket-id">Booking ID: #{{ booking.booking_id }}</span>
+                <span class="ticket-status-pill"><i class="fa-solid fa-shield-halved"></i> Confirmed</span>
+            </div>
+            
+            <div class="ticket-row">
+                <span class="t-label">Ground Name:</span>
+                <span class="t-val">{{ booking.ground.name }}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="t-label">Location:</span>
+                <span class="t-val">{{ booking.ground.address }}, {{ booking.ground.city }}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="t-label">Date:</span>
+                <span class="t-val">{{ booking.booking_date|date:"l, M d, Y" }}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="t-label">Time Slot:</span>
+                <span class="t-val">{{ booking.slot.slot_label }}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="t-label">Sport:</span>
+                <span class="t-val">{{ booking.sport.name }}</span>
+            </div>
+            <div class="ticket-row total-row">
+                <span class="t-label">Total Amount Paid:</span>
+                <span class="t-val">₹{{ booking.total_price|floatformat:0 }}</span>
+            </div>
+        </div>
+
+        <div class="success-actions">
+            <a href="{% url 'my_bookings' %}" class="btn-primary-block">
+                <i class="fa-solid fa-ticket"></i> View in My Bookings
+            </a>
+            <a href="{% url 'home' %}" class="btn-secondary-block">
+                <i class="fa-solid fa-house"></i> Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

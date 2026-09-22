@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - GroundX{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper">
+    <div class="form-container-card">
+        <div class="form-card-header">
+            <h2>{{ title }}</h2>
+            <p>Enter turf ground details, pricing, location coordinates, and operational timings.</p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="ground-crud-form">
+            {% csrf_token %}
+            
+            <div class="form-grid-2">
+                <div class="form-field-group">
+                    <label class="field-label">Ground Name *</label>
+                    {{ form.name }}
+                </div>
+                <div class="form-field-group">
+                    <label class="field-label">Tagline</label>
+                    {{ form.tagline }}
+                </div>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-field-group">
+                    <label class="field-label">Address *</label>
+                    {{ form.address }}
+                </div>
+                <div class="form-field-group">
+                    <label class="field-label">City *</label>
+                    {{ form.city }}
+                </div>
+            </div>
+
+            <div class="form-grid-3">
+                <div class="form-field-group">
+                    <label class="field-label">Latitude (e.g. 16.6956)</label>
+                    {{ form.latitude }}
+                </div>
+                <div class="form-field-group">
+                    <label class="field-label">Longitude (e.g. 74.2317)</label>
+                    {{ form.longitude }}
+                </div>
+                <div class="form-field-group">
+                    <label class="field-label">Hourly Rate (₹) *</label>
+                    {{ form.hourly_rate }}
+                </div>
+            </div>
+
+            <div class="form-field-group">
+                <label class="field-label">Supported Sports *</label>
+                <div class="sports-checkbox-grid">
+                    {{ form.sports }}
+                </div>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-field-group">
+                    <label class="field-label">Status Ribbon Badge (e.g. FILLING FAST, INSTANT)</label>
+                    {{ form.badge }}
+                </div>
+                <div class="form-field-group">
+                    <label class="field-label">Court Formats (Comma separated, e.g. 5V5, 7V7, FLOODLIT)</label>
+                    {{ form.court_formats }}
+                </div>
+            </div>
+
+            <div class="form-field-group">
+                <label class="field-label">Amenities (Comma separated)</label>
+                {{ form.amenities }}
+            </div>
+
+            <div class="form-field-group">
+                <label class="field-label">Image URL (Direct link to high-res photo)</label>
+                {{ form.image_url }}
+            </div>
+
+            <div class="form-field-group">
+                <label class="field-label">Description</label>
+                {{ form.description }}
+            </div>
+
+            <div class="form-actions-row">
+                <button type="submit" class="btn-primary-block"><i class="fa-solid fa-floppy-disk"></i> Save Turf Ground</button>
+                <a href="{% url 'owner_dashboard' %}" class="btn-cancel-link">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

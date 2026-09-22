@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Pitches & Courts - GroundX{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper">
+    <!-- Search Top Controls (Matching Screenshot 2) -->
+    <div class="search-top-bar">
+        <!-- Location Pill Button -->
+        <button class="search-loc-pill" id="locPickerBtn2">
+            <i class="fa-solid fa-location-dot"></i>
+            <span>{{ current_city }}</span>
+        </button>
+
+        <!-- Search Input Bar with Filter Icon -->
+        <form action="{% url 'search' %}" method="GET" class="search-header-form">
+            <div class="search-bar-rounded">
+                <i class="fa-solid fa-magnifying-glass search-ico"></i>
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Football pitches in {{ current_city }}..." class="search-field">
+                <button type="submit" class="filter-ico-btn" title="Search / Filter">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sports Pills Filter Bar (Matching Screenshot 2: All, Football, Tennis, Basketball...) -->
+    <div class="sports-pill-scroll pill-row-compact">
+        <a href="?sport=all{% if search_query %}&q={{ search_query }}{% endif %}" class="sport-pill-sm {% if selected_sport == 'all' or not selected_sport %}active{% endif %}">
+            All
+        </a>
+        {% for sport in sports %}
+        <a href="?sport={{ sport.slug }}{% if search_query %}&q={{ search_query }}{% endif %}" class="sport-pill-sm {% if selected_sport == sport.slug %}active{% endif %}">
+            {% if sport.slug == 'football' %}
+                <i class="fa-solid fa-futbol"></i>
+            {% elif sport.slug == 'tennis' %}
+                <i class="fa-solid fa-table-tennis-paddle-ball"></i>
+            {% elif sport.slug == 'basketball' %}
+                <i class="fa-solid fa-basketball"></i>
+            {% elif sport.slug == 'cricket' %}
+                <i class="fa-solid fa-baseball-bat-ball"></i>
+            {% else %}
+                <span>{{ sport.emoji }}</span>
+            {% endif %}
+            {{ sport.name }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Grounds Results List (Vertical Cards Matching Screenshot 2) -->
+    <div class="ground-list-vertical">
+        {% for item in grounds %}
+        {% with g=item.instance dist=item.distance_km %}
+        <div class="vertical-ground-card">
+            <!-- Media with Ribbon, Wishlist & Dots -->
+            <div class="vertical-card-media">
+                <img src="{{ g.get_display_image }}" alt="{{ g.name }}" class="vertical-card-img" loading="lazy">
+                
+                {% if g.badge %}
+                <div class="status-ribbon ribbon-{{ g.badge|slugify }}">
+                    {{ g.badge }}
+                </div>
+                {% endif %}
+
+                <button class="btn-wishlist" onclick="this.classList.toggle('active')" title="Save to Favorites">
+                    <i class="fa-regular fa-heart"></i>
+                </button>
+
+                <!-- Carousel Dots Indicator (Matching mockup) -->
+                <div class="carousel-dots-indicator">
+                    <span class="dot active"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+
+            <!-- Card Content Details -->
+            <div class="vertical-card-body">
+                <div class="title-rating-row">
+                    <h3 class="ground-name">{{ g.name }}</h3>
+                    <div class="rating-badge-clean">
+                        <i class="fa-solid fa-star"></i> {{ g.rating }}
+                    </div>
+                </div>
+
+                <div class="ground-subtitle-location">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>{{ g.address }} (<strong>{{ dist }} km</strong>)</span>
+                </div>
+
+                <!-- Format Tags (5V5, 7V7, TENNIS, PADEL, FLOODLIT) -->
+                <div class="format-tags-row">
+                    {% for fmt in g.get_court_format_list %}
+                    <span class="format-pill">{{ fmt }}</span>
+                    {% endfor %}
+                    {% for sport in g.sports.all %}
+                    <span class="format-pill">{{ sport.name|upper }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- Bottom Row: Price + Buttons (View Details, Book Slot ->) -->
+                <div class="vertical-card-action-row">
+                    <div class="from-price-box">
+                        <span class="from-sub">FROM</span>
+                        <span class="price-figure">₹{{ g.hourly_rate|floatformat:0 }}<span class="per-hr">/hr</span></span>
+                    </div>
+
+                    <div class="action-buttons-flex">
+                        <a href="{% url 'ground_detail' g.id %}" class="btn-view-details">View Details</a>
+                        <a href="{% url 'ground_detail' g.id %}" class="btn-book-slot-green">
+                            Book Slot <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% empty %}
+        <div class="empty-state-box">
+            <i class="fa-solid fa-magnifying-glass empty-icon"></i>
+            <h3>No grounds found</h3>
+            <p>Try searching for different keywords or select "All Sports".</p>
+            <a href="{% url 'search' %}" class="btn-reset-filters">Clear Filters</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

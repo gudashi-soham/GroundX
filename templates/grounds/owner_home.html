@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}GroundX Owner Portal{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper wide-screen">
+    <div class="owner-portal-header">
+        <div>
+            <p class="eyebrow">Ground Owner Hub</p>
+            <h1>Manage your turf business</h1>
+        </div>
+        <div class="owner-portal-actions">
+            <a href="{% url 'add_ground' %}" class="btn-primary-sm"><i class="fa-solid fa-plus"></i> Add Ground</a>
+            <a href="{% url 'owner_dashboard' %}" class="btn-outline-sm"><i class="fa-solid fa-gauge-high"></i> Live Monitor</a>
+        </div>
+    </div>
+
+    <div class="owner-summary-grid">
+        <div class="summary-card">
+            <div class="summary-icon green"><i class="fa-solid fa-building"></i></div>
+            <div>
+                <span class="summary-label">Total Grounds</span>
+                <strong>{{ total_grounds }}</strong>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon blue"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+            <div>
+                <span class="summary-label">Estimated Revenue</span>
+                <strong>₹{{ total_revenue }}</strong>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon orange"><i class="fa-solid fa-calendar-day"></i></div>
+            <div>
+                <span class="summary-label">Today</span>
+                <strong>{{ today|date:"d M Y" }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-section owner-listing-section">
+        <div class="section-title-between">
+            <h3><i class="fa-solid fa-list"></i> Your Grounds</h3>
+            <a href="{% url 'add_ground' %}" class="btn-primary-sm">New Listing</a>
+        </div>
+
+        {% if owner_grounds %}
+            <div class="owner-ground-list">
+                {% for ground in owner_grounds %}
+                    <div class="owner-ground-card">
+                        <div class="owner-ground-info">
+                            <h4>{{ ground.name }}</h4>
+                            <p>{{ ground.address }}, {{ ground.city }}</p>
+                            <div class="tag-row">
+                                {% for sport in ground.sports.all %}
+                                    <span class="tag-pill tag-sport">{{ sport.name }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="owner-ground-actions">
+                            <span class="price-badge">₹{{ ground.hourly_rate }}/hr</span>
+                            <a href="{% url 'edit_ground' ground.id %}" class="btn-outline-sm">Edit</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state-box">
+                <p>You haven’t added any grounds yet.</p>
+                <a href="{% url 'add_ground' %}" class="btn-primary-sm">Create your first listing</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

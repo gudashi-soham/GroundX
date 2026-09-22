@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}GroundX - Ground Booking System{% endblock %}</title>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="app-body {% if request.resolver_match.url_name == 'login' or request.resolver_match.url_name == 'register' %}auth-page{% endif %}">
+    <!-- Top Global Header / Navigation -->
+    {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand-area">
+                <a href="{% if user.is_authenticated and user.is_owner %}{% url 'owner_home' %}{% else %}{% url 'home' %}{% endif %}" class="brand-logo">
+                    <div class="logo-icon"><i class="fa-solid fa-futbol"></i></div>
+                    <span class="brand-name">Ground<span class="highlight">X</span></span>
+                </a>
+                <span class="badge-role">{% if user.is_authenticated %}{{ user.get_role_display }}{% else %}Player & Owner Portal{% endif %}</span>
+            </div>
+
+            <!-- Desktop Nav Links -->
+            <nav class="desktop-nav">
+                {% if user.is_authenticated and user.is_owner %}
+                    <a href="{% url 'owner_home' %}" class="nav-link {% if request.resolver_match.url_name == 'owner_home' %}active{% endif %}">
+                        <i class="fa-solid fa-house"></i> Home
+                    </a>
+                {% else %}
+                    <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'user_home' %}active{% endif %}">
+                        <i class="fa-solid fa-house"></i> Home
+                    </a>
+                {% endif %}
+
+                {% if not user.is_authenticated or user.is_player %}
+                    <a href="{% url 'search' %}" class="nav-link {% if request.resolver_match.url_name == 'search' %}active{% endif %}">
+                        <i class="fa-solid fa-magnifying-glass"></i> Explore Grounds
+                    </a>
+                {% endif %}
+                
+                {% if user.is_authenticated %}
+                    {% if user.is_player %}
+                        <a href="{% url 'my_bookings' %}" class="nav-link {% if request.resolver_match.url_name == 'my_bookings' %}active{% endif %}">
+                            <i class="fa-solid fa-calendar-check"></i> My Bookings
+                        </a>
+                    {% endif %}
+                    
+                    {% if user.is_owner or user.is_superuser %}
+                        <a href="{% url 'owner_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'owner_dashboard' %}active{% endif %}">
+                            <i class="fa-solid fa-gauge-high"></i> Live Monitor
+                        </a>
+                        <a href="{% url 'owner_analytics' %}" class="nav-link {% if request.resolver_match.url_name == 'owner_analytics' %}active{% endif %}">
+                            <i class="fa-solid fa-chart-pie"></i> Analytics
+                        </a>
+                    {% endif %}
+                    
+                    <div class="user-menu">
+                        <span class="user-greeting"><i class="fa-regular fa-user-circle"></i> {{ user.username }}</span>
+                        <a href="{% url 'logout' %}" class="btn-logout-small" title="Sign Out"><i class="fa-solid fa-right-from-bracket"></i></a>
+                    </div>
+                {% else %}
+                    <div class="auth-buttons">
+                        <a href="{% url 'login' %}" class="btn-outline-sm">Log In</a>
+                        <a href="{% url 'register' %}" class="btn-primary-sm">Register</a>
+                    </div>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+    {% endif %}
+
+    <!-- Global Toast / Alert Messages -->
+    {% if messages %}
+    <div class="toast-container">
+        {% for message in messages %}
+        <div class="toast-alert toast-{{ message.tags }}">
+            <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% elif message.tags == 'error' %}fa-circle-xmark{% else %}fa-circle-info{% endif %}"></i>
+            <span>{{ message }}</span>
+            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile / Responsive App Style matching Mockups) -->
+    {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
+    <nav class="mobile-bottom-nav">
+        <a href="{% url 'home' %}" class="bnav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+            <div class="bnav-icon"><i class="fa-solid fa-house"></i></div>
+            <span class="bnav-label">Home</span>
+        </a>
+        <a href="{% url 'search' %}" class="bnav-item {% if request.resolver_match.url_name == 'search' %}active{% endif %}">
+            <div class="bnav-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+            <span class="bnav-label">Search</span>
+        </a>
+        <a href="{% if user.is_authenticated %}{% if user.is_owner %}{% url 'owner_dashboard' %}{% else %}{% url 'my_bookings' %}{% endif %}{% else %}{% url 'login' %}{% endif %}" class="bnav-item {% if request.resolver_match.url_name in 'my_bookings,owner_dashboard' %}active{% endif %}">
+            <div class="bnav-icon"><i class="fa-solid fa-calendar-check"></i></div>
+            <span class="bnav-label">{% if user.is_authenticated and user.is_owner %}Monitor{% else %}Bookings{% endif %}</span>
+        </a>
+        <a href="{% if user.is_authenticated %}{% if user.is_owner %}{% url 'owner_analytics' %}{% else %}{% url 'profile' %}{% endif %}{% else %}{% url 'login' %}{% endif %}" class="bnav-item {% if request.resolver_match.url_name in 'profile,owner_analytics,login,register' %}active{% endif %}">
+            <div class="bnav-icon"><i class="fa-solid {% if user.is_authenticated and user.is_owner %}fa-chart-pie{% else %}fa-user{% endif %}"></i></div>
+            <span class="bnav-label">{% if user.is_authenticated and user.is_owner %}Analytics{% else %}Profile{% endif %}</span>
+        </a>
+    </nav>
+    {% endif %}
+
+    <!-- Scripts -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/location.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

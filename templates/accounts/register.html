@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Account - GroundX{% endblock %}
+
+{% block content %}
+<div class="auth-shell auth-shell-register">
+    <div class="auth-brand-lockup">
+        <div class="auth-logo-icon"><i class="fa-solid fa-futbol"></i></div>
+        <div>
+            <span class="auth-brand-name">Ground<span>X</span></span>
+            <span class="auth-brand-subtitle">SPORTS BOOKING PORTAL</span>
+        </div>
+    </div>
+
+    <div class="auth-panel">
+        <div class="auth-header">
+            <p class="auth-eyebrow">Start playing</p>
+            <h1>Create your account</h1>
+            <p>Join a community built around the game you love.</p>
+        </div>
+
+        <form method="POST" class="auth-form">
+            {% csrf_token %}
+            
+            <div class="form-field-group">
+                <label class="field-label">I want to join as</label>
+                <div class="role-selector-radios">
+                    {{ form.role }}
+                </div>
+                {{ form.role.errors }}
+            </div>
+
+            <div class="form-field-group">
+                <label class="field-label" for="id_username">Username *</label>
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+
+            <div class="form-field-group">
+                <label class="field-label" for="id_email">Email Address</label>
+                {{ form.email }}
+                {{ form.email.errors }}
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-field-group">
+                    <label class="field-label" for="id_phone_number">Phone Number</label>
+                    {{ form.phone_number }}
+                    {{ form.phone_number.errors }}
+                </div>
+                <div class="form-field-group">
+                    <label class="field-label" for="id_city">City</label>
+                    {{ form.city }}
+                    {{ form.city.errors }}
+                </div>
+            </div>
+
+            <div class="form-field-group">
+                <label class="field-label" for="id_password1">Password *</label>
+                {{ form.password1 }}
+                {{ form.password1.errors }}
+            </div>
+
+            <div class="form-field-group">
+                <label class="field-label" for="id_password2">Confirm Password *</label>
+                {{ form.password2 }}
+                {{ form.password2.errors }}
+            </div>
+
+            {% if form.non_field_errors %}<div class="auth-errors">{{ form.non_field_errors }}</div>{% endif %}
+            <button type="submit" class="btn-primary-block auth-btn">Create Account <i class="fa-solid fa-arrow-right"></i></button>
+        </form>
+
+        <div class="auth-footer">
+            <span>Already registered?</span>
+            <a href="{% url 'login' %}" class="auth-link">Sign In</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

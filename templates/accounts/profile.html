@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - GroundX{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper">
+    <div class="profile-card">
+        <div class="profile-avatar"><i class="fa-solid fa-user"></i></div>
+        <h3>{{ user.username }}</h3>
+        <span class="role-badge-lg">{{ user.get_role_display }}</span>
+        <div class="profile-details-list">
+            <div class="p-item"><span class="p-key">Email:</span> <span class="p-val">{{ user.email|default:"Not provided" }}</span></div>
+            <div class="p-item"><span class="p-key">Phone:</span> <span class="p-val">{{ user.phone_number|default:"Not provided" }}</span></div>
+            <div class="p-item"><span class="p-key">City:</span> <span class="p-val">{{ user.city }}</span></div>
+            <div class="p-item"><span class="p-key">Member Since:</span> <span class="p-val">{{ user.date_joined|date:"M d, Y" }}</span></div>
+        </div>
+
+        <div style="margin-top: 24px;">
+            <a href="{% url 'logout' %}" class="btn-cancel-booking"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
