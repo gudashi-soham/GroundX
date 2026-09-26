@@ -7,11 +7,27 @@
     <div class="form-container-card">
         <div class="form-card-header">
             <h2>{{ title }}</h2>
-            <p>Enter turf ground details, pricing, location coordinates, and operational timings.</p>
+            <p>Enter turf ground details, pricing, address, and operational timings.</p>
         </div>
 
         <form method="POST" enctype="multipart/form-data" class="ground-crud-form">
             {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="form-error-summary" role="alert">
+                <strong>Please correct the following fields:</strong>
+                <ul>
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
             
             <div class="form-grid-2">
                 <div class="form-field-group">
@@ -35,18 +51,19 @@
                 </div>
             </div>
 
-            <div class="form-grid-3">
+            <div class="form-field-group">
+                <label class="field-label">Hourly Rate (₹) *</label>
+                {{ form.hourly_rate }}
+            </div>
+
+            <div class="form-grid-2">
                 <div class="form-field-group">
-                    <label class="field-label">Latitude (e.g. 16.6956)</label>
-                    {{ form.latitude }}
+                    <label class="field-label">Opening Time *</label>
+                    {{ form.opening_time }}
                 </div>
                 <div class="form-field-group">
-                    <label class="field-label">Longitude (e.g. 74.2317)</label>
-                    {{ form.longitude }}
-                </div>
-                <div class="form-field-group">
-                    <label class="field-label">Hourly Rate (₹) *</label>
-                    {{ form.hourly_rate }}
+                    <label class="field-label">Closing Time *</label>
+                    {{ form.closing_time }}
                 </div>
             </div>
 

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Sign In - GroundX{% endblock %}
+{% block title %}{% if role == 'OWNER' %}Turf Owner Sign In - GroundX{% else %}Sign In - GroundX{% endif %}{% endblock %}
 
 {% block content %}
 <div class="auth-shell">
@@ -8,38 +8,132 @@
         <div class="auth-logo-icon"><i class="fa-solid fa-futbol"></i></div>
         <div>
             <span class="auth-brand-name">Ground<span>X</span></span>
-            <span class="auth-brand-subtitle">SPORTS BOOKING PORTAL</span>
+            <span class="auth-brand-subtitle">SPORTS BOOKING & TURF PORTAL</span>
         </div>
     </div>
 
     <div class="auth-panel auth-panel-login">
-        <div class="auth-header">
-            <p class="auth-eyebrow">Welcome back</p>
-            <h1>Sign in to your account</h1>
-            <p>Manage your bookings and discover your next game.</p>
+        <!-- Role Switcher Tabs -->
+        <div class="auth-role-tabs-container">
+            <button type="button" 
+                    class="auth-role-tab {% if role != 'OWNER' %}active{% endif %}" 
+                    id="tabPlayer" 
+                    onclick="selectLoginRole('PLAYER')">
+                <i class="fa-solid fa-user"></i>
+                <span>Player / User</span>
+            </button>
+            <button type="button" 
+                    class="auth-role-tab {% if role == 'OWNER' %}active{% endif %}" 
+                    id="tabOwner" 
+                    onclick="selectLoginRole('OWNER')">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Turf Owner</span>
+            </button>
         </div>
 
-        <form method="POST" class="auth-form">
+        <div class="auth-header">
+            <h1 id="authTitle">
+                {% if role == 'OWNER' %}Sign In as Turf Owner{% else %}Sign In as Player{% endif %}
+            </h1>
+            <p id="authSubtitle">
+                {% if role == 'OWNER' %}
+                Connects directly to your Ground Owner Hub, live slot bookings, and revenue tracking.
+                {% else %}
+                Manage your turf bookings, explore top grounds, and play your next game.
+                {% endif %}
+            </p>
+        </div>
+
+        <form method="POST" class="auth-form" id="loginForm">
             {% csrf_token %}
+            <input type="hidden" name="role" id="loginRoleInput" value="{{ role|default:'PLAYER' }}">
+            {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% endif %}
+
             <div class="form-field-group">
                 <label class="field-label" for="id_username">Username</label>
                 {{ form.username }}
             </div>
             <div class="form-field-group">
-                <div class="field-label-row"><label class="field-label" for="id_password">Password</label><a href="#" class="auth-muted-link">Forgot password?</a></div>
+                <div class="field-label-row">
+                    <label class="field-label" for="id_password">Password</label>
+                    <a href="#" class="auth-muted-link">Forgot password?</a>
+                </div>
                 {{ form.password }}
             </div>
 
-            {% if form.non_field_errors %}<div class="auth-errors">{{ form.non_field_errors }}</div>{% endif %}
-            <label class="remember-row"><input type="checkbox" name="remember_me"> <span>Keep me securely logged in</span></label>
-            <button type="submit" class="btn-primary-block auth-btn">Sign In <i class="fa-solid fa-arrow-right"></i></button>
+            {% if form.non_field_errors %}
+            <div class="auth-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <label class="remember-row">
+                <input type="checkbox" name="remember_me">
+                <span>Keep me securely logged in</span>
+            </label>
+
+            <button type="submit" class="btn-primary-block auth-btn" id="authSubmitBtn">
+                {% if role == 'OWNER' %}
+                Sign In to Owner Hub <i class="fa-solid fa-arrow-right"></i>
+                {% else %}
+                Sign In as Player <i class="fa-solid fa-arrow-right"></i>
+                {% endif %}
+            </button>
         </form>
 
-        <div class="auth-footer">
-            <span>New to GroundX?</span>
-            <a href="{% url 'register' %}" class="auth-link">Create an account</a>
+        <div class="auth-footer" id="authFooter">
+            <div id="footerPlayer" style="{% if role == 'OWNER' %}display: none;{% endif %}">
+                <span>New player to GroundX?</span>
+                <a href="{% url 'register' %}?role=player" class="auth-link">Create a player account</a>
+            </div>
+            <div id="footerOwner" style="{% if role != 'OWNER' %}display: none;{% endif %}">
+                <span>Want to list your turf arena?</span>
+                <a href="{% url 'register' %}?role=owner" class="auth-link">Register as Turf Owner</a>
+            </div>
         </div>
     </div>
 </div>
 
+<script>
+function selectLoginRole(role) {
+    const isOwner = (role === 'OWNER');
+    const roleInput = document.getElementById('loginRoleInput');
+    if (roleInput) roleInput.value = isOwner ? 'OWNER' : 'PLAYER';
+    
+    const tabPlayer = document.getElementById('tabPlayer');
+    const tabOwner = document.getElementById('tabOwner');
+    if (tabPlayer && tabOwner) {
+        tabPlayer.classList.toggle('active', !isOwner);
+        tabOwner.classList.toggle('active', isOwner);
+    }
+    
+    const title = document.getElementById('authTitle');
+    const subtitle = document.getElementById('authSubtitle');
+    const submitBtn = document.getElementById('authSubmitBtn');
+    const footerPlayer = document.getElementById('footerPlayer');
+    const footerOwner = document.getElementById('footerOwner');
+    
+    if (isOwner) {
+        if (title) title.innerText = 'Sign In as Turf Owner';
+        if (subtitle) subtitle.innerText = 'Connects directly to your Ground Owner Hub, live slot bookings, and revenue tracking.';
+        if (submitBtn) submitBtn.innerHTML = 'Sign In to Owner Hub <i class="fa-solid fa-arrow-right"></i>';
+        if (footerPlayer) footerPlayer.style.display = 'none';
+        if (footerOwner) footerOwner.style.display = 'block';
+        document.title = 'Turf Owner Sign In - GroundX';
+    } else {
+        if (title) title.innerText = 'Sign In as Player';
+        if (subtitle) subtitle.innerText = 'Manage your turf bookings, explore top grounds, and play your next game.';
+        if (submitBtn) submitBtn.innerHTML = 'Sign In as Player <i class="fa-solid fa-arrow-right"></i>';
+        if (footerPlayer) footerPlayer.style.display = 'block';
+        if (footerOwner) footerOwner.style.display = 'none';
+        document.title = 'Sign In - GroundX';
+    }
+
+    if (window.history && window.history.replaceState) {
+        const url = new URL(window.location);
+        url.searchParams.set('role', isOwner ? 'owner' : 'player');
+        window.history.replaceState({}, '', url);
+    }
+}
+</script>
 {% endblock %}

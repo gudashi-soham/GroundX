@@ -67,10 +67,13 @@ def home_view(request):
 
 
 def owner_home_view(request):
-    if request.user.is_authenticated and not request.user.is_owner() and not request.user.is_superuser:
+    if not request.user.is_authenticated:
+        return redirect(f'/accounts/owner/login/?next={request.path}')
+    if not request.user.is_owner() and not request.user.is_superuser:
+        messages.error(request, 'Access restricted to Ground Owners.')
         return redirect('home')
 
-    owner_grounds = Ground.objects.filter(owner=request.user).prefetch_related('sports') if request.user.is_authenticated else Ground.objects.none()
+    owner_grounds = Ground.objects.filter(owner=request.user).prefetch_related('sports')
     total_revenue = sum((g.hourly_rate or 0) for g in owner_grounds)
 
     context = {
@@ -299,6 +302,10 @@ def add_ground_view(request):
         if form.is_valid():
             ground = form.save(commit=False)
             ground.owner = request.user
+            city_key = (ground.city or '').strip().lower()
+            if city_key in PRESET_LOCATIONS:
+                ground.latitude = PRESET_LOCATIONS[city_key]['lat']
+                ground.longitude = PRESET_LOCATIONS[city_key]['lon']
             ground.save()
             form.save_m2m() # Save sports
             messages.success(request, f'Ground "{ground.name}" added successfully!')
@@ -316,7 +323,13 @@ def edit_ground_view(request, ground_id):
     if request.method == 'POST':
         form = GroundForm(request.POST, request.FILES, instance=ground)
         if form.is_valid():
-            form.save()
+            ground = form.save(commit=False)
+            city_key = (ground.city or '').strip().lower()
+            if city_key in PRESET_LOCATIONS:
+                ground.latitude = PRESET_LOCATIONS[city_key]['lat']
+                ground.longitude = PRESET_LOCATIONS[city_key]['lon']
+            ground.save()
+            form.save_m2m()
             messages.success(request, f'Ground "{ground.name}" updated successfully!')
             return redirect('owner_dashboard')
         else:

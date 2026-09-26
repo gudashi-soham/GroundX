@@ -14,9 +14,9 @@
     <link rel="stylesheet" href="/static/css/style.css">
     {% block extra_head %}{% endblock %}
 </head>
-<body class="app-body {% if request.resolver_match.url_name == 'login' or request.resolver_match.url_name == 'register' %}auth-page{% endif %}">
+<body class="app-body {% if request.resolver_match.url_name in 'login,register,owner_login' %}auth-page{% endif %}">
     <!-- Top Global Header / Navigation -->
-    {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
+    {% if request.resolver_match.url_name not in 'login,register,owner_login' %}
     <header class="app-header">
         <div class="header-container">
             <div class="brand-area">
@@ -95,7 +95,7 @@
     </main>
 
     <!-- Bottom Navigation Bar (Mobile / Responsive App Style matching Mockups) -->
-    {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
+    {% if request.resolver_match.url_name not in 'login,register,owner_login' %}
     <nav class="mobile-bottom-nav">
         <a href="{% url 'home' %}" class="bnav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
             <div class="bnav-icon"><i class="fa-solid fa-house"></i></div>

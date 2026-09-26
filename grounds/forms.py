@@ -12,7 +12,7 @@ class GroundForm(forms.ModelForm):
         model = Ground
         fields = [
             'name', 'tagline', 'sports', 'address', 'city',
-            'latitude', 'longitude', 'hourly_rate', 'badge',
+            'hourly_rate', 'badge',
             'court_formats', 'amenities', 'description',
             'image_url', 'opening_time', 'closing_time'
         ]
@@ -21,8 +21,6 @@ class GroundForm(forms.ModelForm):
             'tagline': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Premium 5v5 & 7v7 football pitch'}),
             'address': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Rajarampuri, Kolhapur'}),
             'city': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Kolhapur'}),
-            'latitude': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.000001'}),
-            'longitude': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.000001'}),
             'hourly_rate': forms.NumberInput(attrs={'class': 'form-input', 'step': '50'}),
             'badge': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. FILLING FAST or INSTANT'}),
             'court_formats': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. 5V5, 7V7, FLOODLIT'}),
