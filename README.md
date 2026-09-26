@@ -59,5 +59,5 @@ The analytics can help owners understand:
 - Pandas
 - Matplotlib
 
-## 🏗️ Project Structure
+
 
