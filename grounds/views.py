@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from datetime import datetime, date, timedelta
 from .models import Ground, Sport, TimeSlot, Booking
@@ -127,13 +128,15 @@ def ground_detail_view(request, ground_id):
     dist = calculate_haversine_distance(user_lat, user_lon, ground.latitude, ground.longitude)
 
     # Date selector (defaults to today)
-    selected_date_str = request.GET.get('date', date.today().isoformat())
+    selected_date_str = request.GET.get('date', timezone.localdate().isoformat())
     try:
         booking_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
     except ValueError:
-        booking_date = date.today()
+        booking_date = timezone.localdate()
+    if booking_date < timezone.localdate():
+        booking_date = timezone.localdate()
 
-    all_slots = TimeSlot.objects.all()
+    all_slots = TimeSlot.objects.filter(ground=ground, is_active=True)
     # Find booked slot IDs for this ground & date
     booked_slot_ids = Booking.objects.filter(
         ground=ground,
@@ -171,6 +174,31 @@ def ground_detail_view(request, ground_id):
     }
     return render(request, 'grounds/detail.html', context)
 
+def ground_availability_view(request, ground_id):
+    ground = get_object_or_404(Ground, id=ground_id, is_active=True)
+    try:
+        booking_date = datetime.strptime(
+            request.GET.get('date', timezone.localdate().isoformat()),
+            '%Y-%m-%d',
+        ).date()
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date.'}, status=400)
+
+    slots = TimeSlot.objects.filter(ground=ground, is_active=True)
+    booked_slot_ids = set(Booking.objects.filter(
+        ground=ground,
+        booking_date=booking_date,
+        status='CONFIRMED',
+    ).values_list('slot_id', flat=True))
+    response = JsonResponse({
+        'slots': [
+            {'id': slot.id, 'is_booked': slot.id in booked_slot_ids}
+            for slot in slots
+        ],
+    })
+    response['Cache-Control'] = 'no-store'
+    return response
+
 @login_required
 def book_slot_view(request, ground_id):
     ground = get_object_or_404(Ground, id=ground_id, is_active=True)
@@ -190,31 +218,48 @@ def book_slot_view(request, ground_id):
             messages.error(request, 'Invalid date format.')
             return redirect('ground_detail', ground_id=ground.id)
 
-        slot = get_object_or_404(TimeSlot, id=slot_id)
-        sport = Sport.objects.filter(id=sport_id).first() if sport_id else ground.sports.first()
-
-        # Concurrency safety check: check if already booked
-        already_booked = Booking.objects.filter(
-            ground=ground,
-            booking_date=booking_date,
-            slot=slot,
-            status='CONFIRMED'
-        ).exists()
-
-        if already_booked:
-            messages.error(request, f'Slot {slot.slot_label} on {booking_date} is already booked! Please select another slot.')
+        if booking_date < timezone.localdate():
+            messages.error(request, 'You cannot book a slot in the past.')
             return redirect('ground_detail', ground_id=ground.id)
 
-        # Create booking
-        booking = Booking.objects.create(
-            player=request.user,
-            ground=ground,
-            sport=sport,
-            booking_date=booking_date,
-            slot=slot,
-            total_price=ground.hourly_rate,
-            status='CONFIRMED'
-        )
+        slot = TimeSlot.objects.filter(id=slot_id, ground=ground, is_active=True).first()
+        if slot is None:
+            messages.error(request, 'That time slot is no longer available. Please choose another.')
+            return redirect('ground_detail', ground_id=ground.id)
+        sport = Sport.objects.filter(id=sport_id).first() if sport_id else ground.sports.first()
+
+        try:
+            with transaction.atomic():
+                locked_slot = TimeSlot.objects.select_for_update().filter(
+                    id=slot.id,
+                    ground=ground,
+                    is_active=True,
+                ).first()
+                if locked_slot is None:
+                    messages.error(request, 'That time slot is no longer available. Please choose another.')
+                    return redirect('ground_detail', ground_id=ground.id)
+                already_booked = Booking.objects.filter(
+                    ground=ground,
+                    booking_date=booking_date,
+                    slot=slot,
+                    status='CONFIRMED',
+                ).exists()
+                if already_booked:
+                    messages.error(request, f'Slot {slot.slot_label} on {booking_date} is already booked! Please select another slot.')
+                    return redirect('ground_detail', ground_id=ground.id)
+
+                booking = Booking.objects.create(
+                    player=request.user,
+                    ground=ground,
+                    sport=sport,
+                    booking_date=booking_date,
+                    slot=slot,
+                    total_price=ground.hourly_rate * slot.duration_hours,
+                    status='CONFIRMED',
+                )
+        except IntegrityError:
+            messages.error(request, f'Slot {slot.slot_label} on {booking_date} is already booked! Please select another slot.')
+            return redirect('ground_detail', ground_id=ground.id)
 
         messages.success(request, f'Slot booked successfully! Booking ID: {booking.booking_id}')
         return render(request, 'grounds/booking_success.html', {'booking': booking})
@@ -247,7 +292,7 @@ def owner_dashboard_view(request):
     owner_grounds = Ground.objects.filter(owner=request.user).prefetch_related('sports')
     
     # Real-time monitoring for today
-    today = date.today()
+    today = timezone.localdate()
     todays_bookings = Booking.objects.filter(
         ground__owner=request.user,
         booking_date=today,
@@ -260,16 +305,15 @@ def owner_dashboard_view(request):
         status='CONFIRMED'
     ).select_related('ground', 'slot', 'player', 'sport').order_by('booking_date', 'slot__start_time')[:10]
 
-    all_slots = TimeSlot.objects.all()
-
     # Build real-time grid per ground for today
     monitor_grid = []
     for g in owner_grounds:
+        ground_slots = list(g.time_slots.filter(is_active=True))
         ground_booked_slot_ids = set(
             Booking.objects.filter(ground=g, booking_date=today, status='CONFIRMED').values_list('slot_id', flat=True)
         )
         slots_status = []
-        for s in all_slots:
+        for s in ground_slots:
             slots_status.append({
                 'slot': s,
                 'is_occupied': s.id in ground_booked_slot_ids
@@ -278,8 +322,8 @@ def owner_dashboard_view(request):
             'ground': g,
             'slots': slots_status,
             'occupied_count': len(ground_booked_slot_ids),
-            'total_slots': len(all_slots),
-            'occupancy_pct': int((len(ground_booked_slot_ids) / len(all_slots) * 100)) if all_slots else 0
+            'total_slots': len(ground_slots),
+            'occupancy_pct': int((len(ground_booked_slot_ids) / len(ground_slots) * 100)) if ground_slots else 0
         })
 
     context = {

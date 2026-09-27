@@ -92,13 +92,14 @@
             </div>
 
             <!-- Slots Matrix -->
-            <div class="slots-matrix-container">
+            <div class="slots-matrix-container" data-availability-url="{% url 'ground_availability' ground.id %}" data-booking-date="{{ booking_date }}">
                 <label class="form-label-bold">Available Time Slots for {{ booking_date }}:</label>
                 <div class="slots-grid">
                     {% for s in slots_data %}
                     <button type="button" 
                             class="slot-btn {% if s.is_booked %}booked{% else %}available{% endif %}"
                             data-slot-id="{{ s.slot.id }}"
+                            data-duration-hours="{{ s.slot.duration_hours }}"
                             {% if s.is_booked %}disabled title="Already booked by another player"{% endif %}>
                         <span class="slot-time">{{ s.slot.slot_label }}</span>
                         <span class="slot-status-text">
@@ -109,6 +110,8 @@
                             {% endif %}
                         </span>
                     </button>
+                    {% empty %}
+                    <p>No time slots are configured for this ground yet.</p>
                     {% endfor %}
                 </div>
             </div>
@@ -117,7 +120,7 @@
             <div class="booking-summary-bar" id="bookingSummaryBar">
                 <div class="summary-details">
                     <div class="sum-slot-name" id="sumSlotLabel">Select a slot above</div>
-                    <div class="sum-rate">Total: <strong>₹{{ ground.hourly_rate|floatformat:0 }}</strong></div>
+                    <div class="sum-rate" id="sumRateLabel" data-hourly-rate="{{ ground.hourly_rate }}">Select a slot to see the total. Rate: ₹{{ ground.hourly_rate|floatformat:0 }}/hour</div>
                 </div>
                 {% if user.is_authenticated %}
                 <button type="submit" class="btn-confirm-booking" id="btnSubmitBooking" disabled>

@@ -68,10 +68,14 @@
             </div>
 
             <div class="form-field-group">
+                <label class="field-label">Available Time Slots *</label>
+                {{ form.time_slots }}
+                {% if form.time_slots.errors %}<p class="field-error">{{ form.time_slots.errors|join:", " }}</p>{% endif %}
+            </div>
+
+            <div class="form-field-group">
                 <label class="field-label">Supported Sports *</label>
-                <div class="sports-checkbox-grid">
-                    {{ form.sports }}
-                </div>
+                {{ form.sports }}
             </div>
 
             <div class="form-grid-2">
@@ -91,8 +95,8 @@
             </div>
 
             <div class="form-field-group">
-                <label class="field-label">Image URL (Direct link to high-res photo)</label>
-                {{ form.image_url }}
+                <label class="field-label">Ground Photo</label>
+                {{ form.primary_image }}
             </div>
 
             <div class="form-field-group">

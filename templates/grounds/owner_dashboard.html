@@ -35,9 +35,9 @@
                 </div>
             </div>
 
-            <div class="gm-slots-grid">
+            <div class="gm-slots-grid" data-availability-url="{% url 'ground_availability' item.ground.id %}" data-booking-date="{{ today|date:'Y-m-d' }}">
                 {% for s in item.slots %}
-                <div class="gm-slot-cell {% if s.is_occupied %}occupied{% else %}free{% endif %}">
+                <div class="gm-slot-cell {% if s.is_occupied %}occupied{% else %}free{% endif %}" data-slot-id="{{ s.slot.id }}">
                     <span class="gm-time">{{ s.slot.slot_label }}</span>
                     <span class="gm-status-pill">
                         {% if s.is_occupied %}

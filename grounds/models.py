@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from decimal import Decimal
 import uuid
 
 class Sport(models.Model):
@@ -61,15 +62,29 @@ class Ground(models.Model):
         return f'{self.name} - {self.city}'
 
 class TimeSlot(models.Model):
+    ground = models.ForeignKey(Ground, on_delete=models.CASCADE, related_name='time_slots', null=True, blank=True)
     start_time = models.TimeField()
     end_time = models.TimeField()
     slot_label = models.CharField(max_length=50) # e.g. 06:00 AM - 07:00 AM
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['start_time']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['ground', 'start_time', 'end_time'],
+                name='unique_ground_time_range',
+            ),
+        ]
 
     def __str__(self):
         return self.slot_label
+
+    @property
+    def duration_hours(self):
+        start_minutes = self.start_time.hour * 60 + self.start_time.minute
+        end_minutes = self.end_time.hour * 60 + self.end_time.minute
+        return Decimal(end_minutes - start_minutes) / Decimal(60)
 
 class Booking(models.Model):
     STATUS_CHOICES = (
@@ -95,6 +110,13 @@ class Booking(models.Model):
         # Application logic in views ensures confirmed slot uniqueness
         indexes = [
             models.Index(fields=['ground', 'booking_date', 'slot']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['ground', 'booking_date', 'slot'],
+                condition=models.Q(status__in=['CONFIRMED']),
+                name='unique_ground_date_slot_confirmed',
+            ),
         ]
 
 
