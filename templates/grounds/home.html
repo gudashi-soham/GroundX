@@ -47,6 +47,11 @@
                     <i class="fa-solid fa-water"></i> Mumbai
                 </a>
             </div>
+            <div class="place-search-group">
+                <label for="placeSearchInput">Or search for an address or place</label>
+                <input id="placeSearchInput" type="text" placeholder="Enter a city, area, or landmark" autocomplete="off">
+                <small id="placeSearchStatus" aria-live="polite"></small>
+            </div>
             <button class="btn-use-gps" id="modalGpsBtn">
                 <i class="fa-solid fa-location-crosshairs"></i> Use Live GPS Coordinates
             </button>
@@ -109,12 +114,9 @@
             {% for item in grounds %}
             {% with g=item.instance dist=item.distance_km %}
             <div class="ground-featured-card">
-                <!-- Card Image Area with Rating & Badges -->
+                <!-- Card Image Area with Badges -->
                 <div class="ground-card-media">
                     <img src="{{ g.get_display_image }}" alt="{{ g.name }}" class="ground-card-img" loading="lazy">
-                    <div class="rating-badge">
-                        <i class="fa-solid fa-star"></i> {{ g.rating }}
-                    </div>
                     {% if g.badge %}
                     <div class="status-ribbon ribbon-{{ g.badge|slugify }}">
                         {{ g.badge }}
@@ -164,4 +166,11 @@
         </div>
     </section>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+    {% if google_maps_api_key %}
+    <script async src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key|urlencode }}&libraries=places&loading=async&callback=initGroundXPlaces"></script>
+    {% endif %}
 {% endblock %}

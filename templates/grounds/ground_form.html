@@ -68,6 +68,12 @@
             </div>
 
             <div class="form-field-group">
+                <label class="field-label">Date for These Slots *</label>
+                {{ form.schedule_date }}
+                {% if form.schedule_date.errors %}<p class="field-error">{{ form.schedule_date.errors|join:", " }}</p>{% endif %}
+            </div>
+
+            <div class="form-field-group">
                 <label class="field-label">Available Time Slots *</label>
                 {{ form.time_slots }}
                 {% if form.time_slots.errors %}<p class="field-error">{{ form.time_slots.errors|join:", " }}</p>{% endif %}

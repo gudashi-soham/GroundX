@@ -5,7 +5,7 @@
 {% block content %}
 <div class="auth-shell auth-shell-register">
     <div class="auth-brand-lockup">
-        <div class="auth-logo-icon"><i class="fa-solid fa-futbol"></i></div>
+        <div class="auth-logo-icon"><img src="/static/img/groundx-logo.png" alt=""></div>
         <div>
             <span class="auth-brand-name">Ground<span>X</span></span>
             <span class="auth-brand-subtitle">SPORTS BOOKING PORTAL</span>
@@ -29,6 +29,22 @@
                 </div>
                 {{ form.role.errors }}
             </div>
+
+            <section id="owner-terms-panel" class="owner-terms-panel" {% if form.role.value != 'OWNER' %}hidden{% endif %}>
+                <h2>Ground owner terms</h2>
+                <ul>
+                    <li>Provide accurate owner, ground, pricing, and availability details, and keep them up to date.</li>
+                    <li>Your ground can go live only after GroundX admin approval. Approval may be withdrawn if these terms are not followed.</li>
+                    <li>Honor confirmed sessions, keep the ground safe and usable, and promptly update unavailable slots.</li>
+                    <li>GroundX charges the owner a <strong>₹100 platform fee for each successful booking session</strong>, separate from the ground rental paid by the player. Unpaid fees are waived if the booking is cancelled through GroundX.</li>
+                    <li>Follow applicable laws and resolve booking issues promptly and fairly.</li>
+                </ul>
+                <div class="owner-terms-agreement">
+                    {{ form.owner_terms_accepted }}
+                    <label for="id_owner_terms_accepted">I have read and agree to these owner terms.</label>
+                </div>
+                {{ form.owner_terms_accepted.errors }}
+            </section>
 
             <div class="form-field-group">
                 <label class="field-label" for="id_username">Username *</label>
@@ -77,4 +93,20 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (() => {
+        const panel = document.getElementById('owner-terms-panel');
+        const roleInputs = document.querySelectorAll('input[name="role"]');
+        if (!panel || !roleInputs.length) return;
+        const updateTermsVisibility = () => {
+            const selected = document.querySelector('input[name="role"]:checked');
+            panel.hidden = !selected || selected.value !== 'OWNER';
+        };
+        roleInputs.forEach((input) => input.addEventListener('change', updateTermsVisibility));
+        updateTermsVisibility();
+    })();
+</script>
 {% endblock %}

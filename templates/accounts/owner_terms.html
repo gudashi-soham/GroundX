@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Ground Owner Terms | GroundX{% endblock %}
+{% block content %}
+<section class="owner-terms-page">
+    <div class="owner-terms-card">
+        <p class="eyebrow">One last step</p>
+        <h1>Ground owner terms</h1>
+        <p>Review and accept these terms to continue managing your GroundX listing.</p>
+        <ul>
+            <li>Provide accurate owner, ground, pricing, and availability details, and keep them up to date.</li>
+            <li>Your ground can go live only after GroundX admin approval. Approval may be withdrawn if these terms are not followed.</li>
+            <li>Honor confirmed sessions, keep the ground safe and usable, and promptly update unavailable slots.</li>
+            <li>GroundX charges the owner a <strong>₹100 platform fee for each successful booking session</strong>, separate from the ground rental paid by the player.</li>
+            <li>A booking cancelled through GroundX will have its unpaid platform fee waived.</li>
+            <li>Follow applicable laws and resolve booking issues promptly and fairly.</li>
+        </ul>
+        <form method="post">
+            {% csrf_token %}
+            <label class="owner-terms-agreement"><input type="checkbox" name="accept_terms" value="yes" required class="owner-terms-checkbox"> I have read and agree to these owner terms.</label>
+            <button type="submit" class="btn-primary-block owner-terms-submit">Accept terms and continue</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

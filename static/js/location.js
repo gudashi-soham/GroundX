@@ -1,4 +1,40 @@
 // HTML5 Live Geolocation Detection with Automatic Desktop/IP Fallback
+window.initGroundXPlaces = function () {
+    const initialize = () => {
+        const input = document.getElementById('placeSearchInput');
+        const status = document.getElementById('placeSearchStatus');
+        if (!input || !window.google?.maps?.places?.Autocomplete) return;
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+            fields: ['geometry', 'name', 'address_components'],
+            types: ['geocode']
+        });
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            const point = place.geometry && place.geometry.location;
+            if (!point) {
+                if (status) status.textContent = 'Choose a suggested location from the list.';
+                return;
+            }
+            const locality = (place.address_components || []).find(component =>
+                component.types.includes('locality') || component.types.includes('administrative_area_level_2')
+            );
+            const city = locality?.long_name || place.name || 'Selected Location';
+            const url = new URL(window.location.href);
+            url.searchParams.set('lat', point.lat().toFixed(6));
+            url.searchParams.set('lon', point.lng().toFixed(6));
+            url.searchParams.set('city', city);
+            window.location.href = url.toString();
+        });
+        if (status) status.textContent = '';
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    } else {
+        initialize();
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const btnDetectGps = document.getElementById('btnDetectGps');
     const modalGpsBtn = document.getElementById('modalGpsBtn');

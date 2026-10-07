@@ -20,8 +20,15 @@
             <div class="kpi-icon-wrap kpi-green"><i class="fa-solid fa-indian-rupee-sign"></i></div>
             <div class="kpi-details">
                 <span class="kpi-label">Total Revenue</span>
-                <span class="kpi-value">₹{{ analytics.total_revenue }}</span>
-                <span class="kpi-sub">Avg ₹{{ analytics.avg_booking_price }}/booking</span>
+                <span class="kpi-value">&#8377;{{ analytics.total_revenue }}</span>
+                <span class="kpi-sub">Avg &#8377;{{ analytics.avg_booking_price }}/booking</span>
+                <span class="revenue-period-label">{{ analytics.period_label }} revenue</span>
+                <span class="revenue-period-value">&#8377;{{ analytics.period_revenue }}</span>
+                <nav class="revenue-period-options" aria-label="Revenue time period">
+                    <a class="revenue-period-option{% if analytics.revenue_period == 'weekly' %} active{% endif %}" href="?revenue_period=weekly&amp;trend_period={{ analytics.trend_period }}"{% if analytics.revenue_period == 'weekly' %} aria-current="page"{% endif %}>Weekly</a>
+                    <a class="revenue-period-option{% if analytics.revenue_period == 'monthly' %} active{% endif %}" href="?revenue_period=monthly&amp;trend_period={{ analytics.trend_period }}"{% if analytics.revenue_period == 'monthly' %} aria-current="page"{% endif %}>Monthly</a>
+                    <a class="revenue-period-option{% if analytics.revenue_period == 'yearly' %} active{% endif %}" href="?revenue_period=yearly&amp;trend_period={{ analytics.trend_period }}"{% if analytics.revenue_period == 'yearly' %} aria-current="page"{% endif %}>Yearly</a>
+                </nav>
             </div>
         </div>
 
@@ -53,42 +60,79 @@
         </div>
     </div>
 
-    <div class="callout-card-analysis">
-        <div class="callout-icon"><i class="fa-solid fa-lightbulb"></i></div>
-        <div class="callout-content">
-            <h4>Ground Utilization Summary</h4>
-            <p>
-                <strong>Top Performing Ground:</strong> <span class="badge-tag-green">{{ analytics.most_booked_ground }} ({{ analytics.most_booked_count }} bookings)</span><br>
-                <strong>Needs Promotion:</strong> <span class="badge-tag-amber">{{ analytics.least_booked_ground }} ({{ analytics.least_booked_count }} bookings)</span>
-            </p>
-            <p class="callout-tip">Tip: Consider offering discount pricing for morning slots on <em>{{ analytics.least_booked_ground }}</em> to balance utilization.</p>
+    <section class="utilization-summary" aria-labelledby="utilization-summary-title">
+        <div class="utilization-summary-header">
+            <span class="utilization-summary-icon"><i class="fa-solid fa-chart-simple"></i></span>
+            <div>
+                <h3 id="utilization-summary-title">Ground Utilization Summary</h3>
+                <p>Booking performance across your grounds</p>
+            </div>
         </div>
-    </div>
+
+        <div class="utilization-summary-grid">
+            <article class="utilization-summary-item utilization-summary-top">
+                <span class="utilization-summary-label">Top Performing Ground</span>
+                <strong>{{ analytics.most_booked_ground }}</strong>
+                <span class="utilization-summary-count">{{ analytics.most_booked_count }} bookings</span>
+            </article>
+            <article class="utilization-summary-item utilization-summary-promotion">
+                <span class="utilization-summary-label">Needs Promotion</span>
+                <strong>{{ analytics.least_booked_ground }}</strong>
+                <span class="utilization-summary-count">{{ analytics.least_booked_count }} bookings</span>
+            </article>
+        </div>
+
+        <div class="utilization-summary-tip">
+            <i class="fa-regular fa-lightbulb"></i>
+            <p><strong>Growth idea</strong> Try a morning offer at <em>{{ analytics.least_booked_ground }}</em>.</p>
+        </div>
+    </section>
 
     <div class="charts-grid-2">
         <div class="chart-card">
             <div class="chart-card-header">
-                <h4><i class="fa-solid fa-futbol"></i> Top Sports</h4>
+                <h4><i class="fa-solid fa-chart-pie"></i> Top Sports</h4>
             </div>
-            <div class="chart-img-wrap">
-                <ul class="simple-metric-list">
-                    {% for sport, count in analytics.top_sports %}
-                    <li><span>{{ sport }}</span><strong>{{ count }}</strong></li>
+                        <div class="chart-img-wrap top-sports-wrap">
+                <div class="sports-donut" role="img" aria-label="Booking distribution across {{ analytics.top_sports|length }} sports, {{ analytics.total_bookings }} bookings" style="background: conic-gradient({{ analytics.sport_chart_gradient }});">
+                    <span class="sports-donut-center"><strong>{{ analytics.total_bookings }}</strong><small>bookings</small></span>
+                </div>
+                <ul class="top-sports-list">
+                    {% for sport in analytics.top_sports %}
+                    <li class="top-sports-item">
+                        <span class="top-sport-icon" style="--sport-color: {{ sport.chart_color }}"><i class="{{ sport.icon_class }}" aria-hidden="true"></i></span>
+                        <span class="top-sport-details">
+                            <strong>{{ sport.name }}</strong>
+                            <small>{{ sport.count }} booking{{ sport.count|pluralize }}</small>
+                        </span>
+                        <strong class="top-sport-percentage">{{ sport.percentage }}%</strong>
+                    </li>
                     {% endfor %}
                 </ul>
             </div>
         </div>
 
         <div class="chart-card">
-            <div class="chart-card-header">
-                <h4><i class="fa-solid fa-calendar-week"></i> Recent 14-Day Trend</h4>
+            <div class="chart-card-header trend-chart-header">
+                <div>
+                    <h4><i class="fa-solid fa-chart-column"></i> Booking Trends</h4>
+                    <p>{{ analytics.trend_label }} &middot; {{ analytics.trend_total }} bookings</p>
+                </div>
+                <nav class="trend-period-options" aria-label="Booking trend period">
+                    <a class="trend-period-option{% if analytics.trend_period == 'weekly' %} active{% endif %}" href="?trend_period=weekly&amp;revenue_period={{ analytics.revenue_period }}"{% if analytics.trend_period == 'weekly' %} aria-current="page"{% endif %}>Weekly</a>
+                    <a class="trend-period-option{% if analytics.trend_period == 'monthly' %} active{% endif %}" href="?trend_period=monthly&amp;revenue_period={{ analytics.revenue_period }}"{% if analytics.trend_period == 'monthly' %} aria-current="page"{% endif %}>Monthly</a>
+                </nav>
             </div>
-            <div class="chart-img-wrap">
-                <ul class="simple-metric-list">
-                    {% for item in analytics.recent_trend %}
-                    <li><span>{{ item.date }}</span><strong>{{ item.count }}</strong></li>
-                    {% endfor %}
-                </ul>
+            <div class="booking-trend-chart" role="img" aria-label="{{ analytics.trend_label }} booking trend, {{ analytics.trend_total }} total bookings">
+                {% for item in analytics.recent_trend %}
+                <div class="booking-trend-column" aria-label="{{ item.detail }}: {{ item.count }} bookings">
+                    <span class="booking-trend-value">{{ item.count }}</span>
+                    <div class="booking-trend-bar-area">
+                        <span class="booking-trend-bar" style="height: {{ item.bar_height }}%"></span>
+                    </div>
+                    <span class="booking-trend-label">{{ item.label }}</span>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>

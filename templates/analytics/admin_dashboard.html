@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Admin Control Room | GroundX{% endblock %}
+{% block content %}
+<section class="admin-page">
+    <div class="admin-heading">
+        <div><p class="eyebrow">GroundX management</p><h1>Admin control room</h1><p>Owner approvals and business performance at a glance.</p></div>
+        <span class="admin-secure"><i class="fa-solid fa-shield-halved"></i> Superuser access</span>
+    </div>
+
+    <div class="admin-stat-grid">
+        <article class="admin-stat"><span>Active owners</span><strong>{{ active_owner_count }}</strong><i class="fa-solid fa-user-check"></i></article>
+        <article class="admin-stat"><span>Active grounds</span><strong>{{ active_ground_count }}</strong><i class="fa-solid fa-futbol"></i></article>
+        <article class="admin-stat"><span>Bookings</span><strong>{{ booking_count }}</strong><i class="fa-solid fa-calendar-check"></i></article>
+        <article class="admin-stat"><span>Booking value · 12 months</span><strong>₹{{ monthly_revenue|floatformat:0 }}</strong><i class="fa-solid fa-indian-rupee-sign"></i></article>
+        <article class="admin-stat"><span>Owner fees outstanding</span><strong>₹{{ platform_fees_due|floatformat:2 }}</strong><i class="fa-solid fa-receipt"></i></article>
+    </div>
+
+    <div class="admin-chart-grid">
+        <article class="admin-panel"><div class="admin-panel-heading"><div><h2>Monthly business</h2><p>Confirmed and completed bookings, trailing 12 months</p></div></div><img class="admin-chart" src="data:image/png;base64,{{ revenue_chart }}" alt="Monthly booking revenue chart"></article>
+        <article class="admin-panel"><div class="admin-panel-heading"><div><h2>Grounds by area</h2><p>Where active grounds are registered</p></div></div><img class="admin-chart" src="data:image/png;base64,{{ area_chart }}" alt="Active grounds by city chart"></article>
+    </div>
+
+    <div class="admin-lower-grid">
+        <article class="admin-panel">
+            <div class="admin-panel-heading"><div><h2>Owner approvals</h2><p>{{ pending_owner_count }} waiting for review</p></div></div>
+            {% if pending_owners %}
+            <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Owner</th><th>Area</th><th>Joined</th><th>Action</th></tr></thead><tbody>
+                {% for owner in pending_owners %}<tr><td><strong>{{ owner.get_full_name|default:owner.username }}</strong><small>{{ owner.email|default:'No email provided' }}</small></td><td>{{ owner.city }}</td><td>{{ owner.date_joined|date:'M j, Y' }}</td><td><form method="post" action="{% url 'owner_approval' owner.id %}">{% csrf_token %}<button class="admin-approve" name="action" value="approve"><i class="fa-solid fa-check"></i> Approve</button></form></td></tr>{% endfor %}
+            </tbody></table></div>
+            {% else %}<p class="admin-empty">All owner applications have been reviewed.</p>{% endif %}
+        </article>
+        <article class="admin-panel"><div class="admin-panel-heading"><div><h2>Top grounds</h2><p>Ranked by confirmed and completed bookings</p></div></div>
+            {% if best_grounds %}<div class="admin-ranked-list">{% for ground in best_grounds %}<div class="admin-rank-row"><span class="admin-rank">{{ forloop.counter }}</span><div><strong>{{ ground.name }}</strong><small>{{ ground.city }} · {{ ground.owner.username }}</small></div><b>{{ ground.booking_count }} bookings</b></div>{% endfor %}</div>{% else %}<p class="admin-empty">No active grounds to rank yet.</p>{% endif %}
+        </article>
+    </div>
+
+    <div class="admin-lower-grid admin-area-grid">
+        <article class="admin-panel"><div class="admin-panel-heading"><div><h2>Owner fee balances</h2><p>₹100 per confirmed session · record fees collected outside GroundX</p></div></div>{% if owner_fee_balances %}<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Owner</th><th>Sessions</th><th>Amount due</th><th>Action</th></tr></thead><tbody>{% for balance in owner_fee_balances %}<tr><td><strong>{{ balance.username }}</strong><small>{{ balance.city }}</small></td><td>{{ balance.due_sessions }}</td><td>₹{{ balance.fee_due|floatformat:2 }}</td><td><form method="post" action="{% url 'settle_owner_fees' balance.id %}">{% csrf_token %}<button class="admin-approve" name="action" value="settle">Record paid</button></form></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="admin-empty">No owner fees are currently due.</p>{% endif %}</article>
+        <article class="admin-panel"><div class="admin-panel-heading"><div><h2>Approved owners</h2><p>Revoke access when an owner should be paused</p></div></div>{% if approved_owners %}<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Owner</th><th>Area</th><th>Terms</th><th>Action</th></tr></thead><tbody>{% for owner in approved_owners %}<tr><td><strong>{{ owner.username }}</strong><small>{{ owner.email|default:'No email provided' }}</small></td><td>{{ owner.city }}</td><td>{% if owner.owner_terms_accepted_at %}Accepted{% else %}Required{% endif %}</td><td><form method="post" action="{% url 'owner_approval' owner.id %}">{% csrf_token %}<button class="admin-approve admin-revoke" name="action" value="revoke">Revoke approval</button></form></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="admin-empty">No approved owners yet.</p>{% endif %}</article>
+        <article class="admin-panel"><div class="admin-panel-heading"><div><h2>Active owners by area</h2><p>Approved owner accounts</p></div></div>{% if owner_areas %}<div class="admin-ranked-list">{% for area in owner_areas %}<div class="admin-rank-row"><strong>{{ area.city|default:'Unknown' }}</strong><b>{{ area.total }}</b></div>{% endfor %}</div>{% else %}<p class="admin-empty">No active owners yet.</p>{% endif %}</article>
+        <article class="admin-panel"><div class="admin-panel-heading"><div><h2>Grounds by area</h2><p>Active inventory breakdown</p></div></div>{% if ground_areas %}<div class="admin-ranked-list">{% for area in ground_areas %}<div class="admin-rank-row"><strong>{{ area.city|default:'Unknown' }}</strong><b>{{ area.total }}</b></div>{% endfor %}</div>{% else %}<p class="admin-empty">No active grounds yet.</p>{% endif %}</article>
+    </div>
+</section>
+{% endblock %}

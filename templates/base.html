@@ -11,7 +11,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="app-body {% if request.resolver_match.url_name in 'login,register,owner_login' %}auth-page{% endif %}">
@@ -21,7 +21,7 @@
         <div class="header-container">
             <div class="brand-area">
                 <a href="{% if user.is_authenticated and user.is_owner %}{% url 'owner_home' %}{% else %}{% url 'home' %}{% endif %}" class="brand-logo">
-                    <div class="logo-icon"><i class="fa-solid fa-futbol"></i></div>
+                    <div class="logo-icon"><img src="/static/img/groundx-logo.png" alt=""></div>
                     <span class="brand-name">Ground<span class="highlight">X</span></span>
                 </a>
                 <span class="badge-role">{% if user.is_authenticated %}{{ user.get_role_display }}{% else %}Player & Owner Portal{% endif %}</span>
@@ -46,13 +46,16 @@
                 {% endif %}
                 
                 {% if user.is_authenticated %}
+                    {% if user.is_superuser %}
+                        <a href="{% url 'admin_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"><i class="fa-solid fa-shield-halved"></i> Admin</a>
+                    {% endif %}
                     {% if user.is_player %}
                         <a href="{% url 'my_bookings' %}" class="nav-link {% if request.resolver_match.url_name == 'my_bookings' %}active{% endif %}">
                             <i class="fa-solid fa-calendar-check"></i> My Bookings
                         </a>
                     {% endif %}
                     
-                    {% if user.is_owner or user.is_superuser %}
+                    {% if user.is_owner %}
                         <a href="{% url 'owner_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'owner_dashboard' %}active{% endif %}">
                             <i class="fa-solid fa-gauge-high"></i> Live Monitor
                         </a>
@@ -97,6 +100,7 @@
     <!-- Bottom Navigation Bar (Mobile / Responsive App Style matching Mockups) -->
     {% if request.resolver_match.url_name not in 'login,register,owner_login' %}
     <nav class="mobile-bottom-nav">
+        {% if user.is_superuser %}<a href="{% url 'admin_dashboard' %}" class="bnav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"><div class="bnav-icon"><i class="fa-solid fa-shield-halved"></i></div><span class="bnav-label">Admin</span></a>{% else %}
         <a href="{% url 'home' %}" class="bnav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
             <div class="bnav-icon"><i class="fa-solid fa-house"></i></div>
             <span class="bnav-label">Home</span>
@@ -113,6 +117,7 @@
             <div class="bnav-icon"><i class="fa-solid {% if user.is_authenticated and user.is_owner %}fa-chart-pie{% else %}fa-user{% endif %}"></i></div>
             <span class="bnav-label">{% if user.is_authenticated and user.is_owner %}Analytics{% else %}Profile{% endif %}</span>
         </a>
+        {% endif %}
     </nav>
     {% endif %}
 
