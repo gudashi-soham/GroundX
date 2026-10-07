@@ -8,6 +8,9 @@ class User(AbstractUser):
         ('ADMIN', 'Administrator'),
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='PLAYER')
+    # Existing owners remain approved; registration explicitly marks new owners pending.
+    is_owner_approved = models.BooleanField(default=True)
+    owner_terms_accepted_at = models.DateTimeField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     city = models.CharField(max_length=100, default='Kolhapur')
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)

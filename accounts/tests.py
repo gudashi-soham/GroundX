@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -10,7 +11,8 @@ class OwnerLoginTests(TestCase):
         self.owner_user = User.objects.create_user(
             username='turf_owner_test',
             password='Password123!',
-            role='OWNER'
+            role='OWNER',
+            owner_terms_accepted_at=timezone.now(),
         )
         self.player_user = User.objects.create_user(
             username='player_test',
@@ -62,6 +64,19 @@ class OwnerLoginTests(TestCase):
         self.assertRedirects(response, reverse('owner_home'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Ground Owner Hub')
+
+    def test_existing_approved_owner_must_accept_new_terms(self):
+        legacy_owner = User.objects.create_user(
+            username='legacy_owner', password='Password123!', role='OWNER',
+            is_owner_approved=True,
+        )
+        self.client.force_login(legacy_owner)
+        response = self.client.get(reverse('owner_home'))
+        self.assertRedirects(response, reverse('accept_owner_terms'))
+        response = self.client.post(reverse('accept_owner_terms'), {'accept_terms': 'yes'})
+        self.assertRedirects(response, reverse('owner_home'))
+        legacy_owner.refresh_from_db()
+        self.assertIsNotNone(legacy_owner.owner_terms_accepted_at)
 
     def test_player_login_redirects_to_home(self):
         """Player user signing in redirects to user home."""
