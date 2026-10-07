@@ -12,6 +12,9 @@ SECRET_KEY = 'django-insecure-smart-ground-booking-secret-key-2026'
 
 DEBUG = True
 
+# Google Places key for the location picker. Set this in the environment when ready.
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
 ALLOWED_HOSTS = ['*']
 
 # Application definition

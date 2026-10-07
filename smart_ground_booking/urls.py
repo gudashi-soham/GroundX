@@ -24,6 +24,7 @@ urlpatterns = [
     path('', include('grounds.urls')),
     path('accounts/', include('accounts.urls')),
     path('analytics/', include('analytics.urls')),
+    path('control-room/', include('analytics.admin_urls')),
 ]
 
 if settings.DEBUG:
