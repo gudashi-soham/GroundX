@@ -1,0 +1,2 @@
+# User-uploaded media belongs to the local/deployment media storage, not Git.
+/media/
