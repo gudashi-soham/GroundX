@@ -1,10 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from datetime import datetime, date, timedelta
+from decimal import Decimal
+from django.db.models import Sum
 from .models import Ground, Sport, TimeSlot, Booking
 from .forms import GroundForm
 from .utils import calculate_haversine_distance, PRESET_LOCATIONS
@@ -29,7 +32,7 @@ def user_home_view(request):
     selected_sport_slug = request.GET.get('sport', 'all')
     search_query = request.GET.get('q', '').strip()
     
-    grounds = Ground.objects.filter(is_active=True).prefetch_related('sports')
+    grounds = Ground.objects.filter(is_active=True, owner__is_active=True, owner__is_owner_approved=True, owner__owner_terms_accepted_at__isnull=False).prefetch_related('sports')
 
     if search_query:
         grounds = grounds.filter(name__icontains=search_query) | grounds.filter(city__icontains=search_query) | grounds.filter(sports__name__icontains=search_query)
@@ -57,12 +60,13 @@ def user_home_view(request):
         'current_city': current_city,
         'user_lat': user_lat,
         'user_lon': user_lon,
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY,
     }
     return render(request, 'grounds/home.html', context)
 
 
 def home_view(request):
-    if request.user.is_authenticated and request.user.is_owner():
+    if request.user.is_authenticated and request.user.is_owner() and request.user.is_owner_approved:
         return redirect('owner_home')
     return user_home_view(request)
 
@@ -73,14 +77,24 @@ def owner_home_view(request):
     if not request.user.is_owner() and not request.user.is_superuser:
         messages.error(request, 'Access restricted to Ground Owners.')
         return redirect('home')
+    if request.user.is_owner() and not request.user.is_owner_approved:
+        messages.info(request, 'Your owner account is awaiting administrator approval.')
+        return redirect('home')
+    if request.user.is_owner() and not request.user.owner_terms_accepted_at:
+        return redirect('accept_owner_terms')
 
     owner_grounds = Ground.objects.filter(owner=request.user).prefetch_related('sports')
     total_revenue = sum((g.hourly_rate or 0) for g in owner_grounds)
+    platform_fees_due = Booking.objects.filter(
+        ground__owner=request.user,
+        platform_fee_status='DUE',
+    ).aggregate(total=Sum('platform_fee_amount'))['total'] or Decimal('0.00')
 
     context = {
         'owner_grounds': owner_grounds,
         'total_grounds': owner_grounds.count(),
         'total_revenue': total_revenue,
+        'platform_fees_due': platform_fees_due,
         'today': date.today(),
     }
     return render(request, 'grounds/owner_home.html', context)
@@ -91,7 +105,7 @@ def search_view(request):
     selected_sport_slug = request.GET.get('sport', 'all')
     search_query = request.GET.get('q', '').strip()
 
-    grounds = Ground.objects.filter(is_active=True).prefetch_related('sports')
+    grounds = Ground.objects.filter(is_active=True, owner__is_active=True, owner__is_owner_approved=True, owner__owner_terms_accepted_at__isnull=False).prefetch_related('sports')
 
     if search_query:
         grounds = grounds.filter(name__icontains=search_query) | grounds.filter(city__icontains=search_query) | grounds.filter(address__icontains=search_query) | grounds.filter(sports__name__icontains=search_query)
@@ -123,7 +137,7 @@ def search_view(request):
     return render(request, 'grounds/search.html', context)
 
 def ground_detail_view(request, ground_id):
-    ground = get_object_or_404(Ground, id=ground_id, is_active=True)
+    ground = get_object_or_404(Ground, id=ground_id, is_active=True, owner__is_active=True, owner__is_owner_approved=True, owner__owner_terms_accepted_at__isnull=False)
     user_lat, user_lon, _ = get_user_coordinates(request)
     dist = calculate_haversine_distance(user_lat, user_lon, ground.latitude, ground.longitude)
 
@@ -136,7 +150,11 @@ def ground_detail_view(request, ground_id):
     if booking_date < timezone.localdate():
         booking_date = timezone.localdate()
 
-    all_slots = TimeSlot.objects.filter(ground=ground, is_active=True)
+    all_slots = TimeSlot.objects.filter(
+        ground=ground,
+        slot_date=booking_date,
+        is_active=True,
+    )
     # Find booked slot IDs for this ground & date
     booked_slot_ids = Booking.objects.filter(
         ground=ground,
@@ -156,7 +174,7 @@ def ground_detail_view(request, ground_id):
     # Upcoming 5 days for easy date picker chips
     date_chips = []
     for i in range(5):
-        d = date.today() + timedelta(days=i)
+        d = timezone.localdate() + timedelta(days=i)
         date_chips.append({
             'date': d.isoformat(),
             'day_name': 'Today' if i == 0 else ('Tomorrow' if i == 1 else d.strftime('%a')),
@@ -175,7 +193,7 @@ def ground_detail_view(request, ground_id):
     return render(request, 'grounds/detail.html', context)
 
 def ground_availability_view(request, ground_id):
-    ground = get_object_or_404(Ground, id=ground_id, is_active=True)
+    ground = get_object_or_404(Ground, id=ground_id, is_active=True, owner__is_active=True, owner__is_owner_approved=True, owner__owner_terms_accepted_at__isnull=False)
     try:
         booking_date = datetime.strptime(
             request.GET.get('date', timezone.localdate().isoformat()),
@@ -184,7 +202,11 @@ def ground_availability_view(request, ground_id):
     except ValueError:
         return JsonResponse({'error': 'Invalid date.'}, status=400)
 
-    slots = TimeSlot.objects.filter(ground=ground, is_active=True)
+    slots = TimeSlot.objects.filter(
+        ground=ground,
+        slot_date=booking_date,
+        is_active=True,
+    )
     booked_slot_ids = set(Booking.objects.filter(
         ground=ground,
         booking_date=booking_date,
@@ -201,7 +223,7 @@ def ground_availability_view(request, ground_id):
 
 @login_required
 def book_slot_view(request, ground_id):
-    ground = get_object_or_404(Ground, id=ground_id, is_active=True)
+    ground = get_object_or_404(Ground, id=ground_id, is_active=True, owner__is_active=True, owner__is_owner_approved=True, owner__owner_terms_accepted_at__isnull=False)
     
     if request.method == 'POST':
         slot_id = request.POST.get('slot_id')
@@ -222,7 +244,12 @@ def book_slot_view(request, ground_id):
             messages.error(request, 'You cannot book a slot in the past.')
             return redirect('ground_detail', ground_id=ground.id)
 
-        slot = TimeSlot.objects.filter(id=slot_id, ground=ground, is_active=True).first()
+        slot = TimeSlot.objects.filter(
+            id=slot_id,
+            ground=ground,
+            slot_date=booking_date,
+            is_active=True,
+        ).first()
         if slot is None:
             messages.error(request, 'That time slot is no longer available. Please choose another.')
             return redirect('ground_detail', ground_id=ground.id)
@@ -233,6 +260,7 @@ def book_slot_view(request, ground_id):
                 locked_slot = TimeSlot.objects.select_for_update().filter(
                     id=slot.id,
                     ground=ground,
+                    slot_date=booking_date,
                     is_active=True,
                 ).first()
                 if locked_slot is None:
@@ -256,6 +284,8 @@ def book_slot_view(request, ground_id):
                     slot=slot,
                     total_price=ground.hourly_rate * slot.duration_hours,
                     status='CONFIRMED',
+                    platform_fee_amount=Decimal('100.00'),
+                    platform_fee_status='DUE',
                 )
         except IntegrityError:
             messages.error(request, f'Slot {slot.slot_label} on {booking_date} is already booked! Please select another slot.')
@@ -276,7 +306,11 @@ def cancel_booking_view(request, booking_id):
     booking = get_object_or_404(Booking, booking_id=booking_id, player=request.user)
     if booking.status == 'CONFIRMED':
         booking.status = 'CANCELLED'
-        booking.save()
+        update_fields = ['status']
+        if booking.platform_fee_status == 'DUE':
+            booking.platform_fee_status = 'WAIVED'
+            update_fields.append('platform_fee_status')
+        booking.save(update_fields=update_fields)
         messages.success(request, f'Booking {booking.booking_id} has been cancelled.')
     else:
         messages.warning(request, 'This booking cannot be cancelled.')
@@ -288,6 +322,11 @@ def owner_dashboard_view(request):
     if not (request.user.is_owner() or request.user.is_superuser):
         messages.error(request, 'Access restricted to Ground Owners.')
         return redirect('home')
+    if request.user.is_owner() and not request.user.is_owner_approved:
+        messages.info(request, 'Your owner account is awaiting administrator approval.')
+        return redirect('home')
+    if request.user.is_owner() and not request.user.owner_terms_accepted_at:
+        return redirect('accept_owner_terms')
 
     owner_grounds = Ground.objects.filter(owner=request.user).prefetch_related('sports')
     
@@ -308,7 +347,7 @@ def owner_dashboard_view(request):
     # Build real-time grid per ground for today
     monitor_grid = []
     for g in owner_grounds:
-        ground_slots = list(g.time_slots.filter(is_active=True))
+        ground_slots = list(g.time_slots.filter(slot_date=today, is_active=True))
         ground_booked_slot_ids = set(
             Booking.objects.filter(ground=g, booking_date=today, status='CONFIRMED').values_list('slot_id', flat=True)
         )
@@ -340,6 +379,11 @@ def add_ground_view(request):
     if not (request.user.is_owner() or request.user.is_superuser):
         messages.error(request, 'Access restricted to Ground Owners.')
         return redirect('home')
+    if request.user.is_owner() and not request.user.is_owner_approved:
+        messages.info(request, 'Your owner account is awaiting administrator approval.')
+        return redirect('home')
+    if request.user.is_owner() and not request.user.owner_terms_accepted_at:
+        return redirect('accept_owner_terms')
 
     if request.method == 'POST':
         form = GroundForm(request.POST, request.FILES)
@@ -363,6 +407,14 @@ def add_ground_view(request):
 
 @login_required
 def edit_ground_view(request, ground_id):
+    if not (request.user.is_owner() or request.user.is_superuser):
+        messages.error(request, 'Access restricted to Ground Owners.')
+        return redirect('home')
+    if request.user.is_owner() and not request.user.is_owner_approved:
+        messages.info(request, 'Your owner account is awaiting administrator approval.')
+        return redirect('home')
+    if request.user.is_owner() and not request.user.owner_terms_accepted_at:
+        return redirect('accept_owner_terms')
     ground = get_object_or_404(Ground, id=ground_id, owner=request.user)
     if request.method == 'POST':
         form = GroundForm(request.POST, request.FILES, instance=ground)

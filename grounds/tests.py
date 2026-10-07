@@ -23,6 +23,7 @@ class GroundFormTests(TestCase):
 			'amenities': 'Floodlights',
 			'opening_time': '06:00',
 			'closing_time': '23:00',
+			'schedule_date': timezone.localdate().isoformat(),
 			'time_slots': '10:00-12:00\n14:00-16:00\n16:00-17:00',
 		}
 
@@ -86,7 +87,10 @@ class GroundFormTests(TestCase):
 
 class GroundBookingAvailabilityTests(TestCase):
 	def setUp(self):
-		self.owner = User.objects.create_user(username='slot-owner', password='test', role='OWNER')
+		self.booking_date = timezone.localdate() + timedelta(days=1)
+		self.owner = User.objects.create_user(
+			username='slot-owner', password='test', role='OWNER', owner_terms_accepted_at=timezone.now()
+		)
 		self.player = User.objects.create_user(username='slot-player', password='test', role='PLAYER')
 		self.ground = Ground.objects.create(
 			owner=self.owner,
@@ -104,17 +108,18 @@ class GroundBookingAvailabilityTests(TestCase):
 		self.sport = Sport.objects.create(name='Football', slug='football')
 		self.slot = TimeSlot.objects.create(
 			ground=self.ground,
+			slot_date=self.booking_date,
 			start_time=time(10),
 			end_time=time(12),
 			slot_label='10:00 AM - 12:00 PM',
 		)
 		self.other_ground_slot = TimeSlot.objects.create(
 			ground=self.other_ground,
+			slot_date=self.booking_date,
 			start_time=time(10),
 			end_time=time(12),
 			slot_label='10:00 AM - 12:00 PM',
 		)
-		self.booking_date = timezone.localdate() + timedelta(days=1)
 		self.client.force_login(self.player)
 
 	def post_booking(self, ground, slot, booking_date=None):
@@ -134,9 +139,32 @@ class GroundBookingAvailabilityTests(TestCase):
 		self.assertEqual(Booking.objects.count(), 1)
 
 		other_date = self.booking_date + timedelta(days=1)
-		other_date_response = self.post_booking(self.ground, self.slot, other_date)
+		unconfigured_date_response = self.post_booking(self.ground, self.slot, other_date)
+		self.assertEqual(unconfigured_date_response.status_code, 302)
+		self.assertEqual(Booking.objects.count(), 1)
+
+		other_date_slot = TimeSlot.objects.create(
+			ground=self.ground,
+			slot_date=other_date,
+			start_time=time(10),
+			end_time=time(12),
+			slot_label='10:00 AM - 12:00 PM',
+		)
+		other_date_response = self.post_booking(self.ground, other_date_slot, other_date)
 		self.assertEqual(other_date_response.status_code, 200)
 		self.assertEqual(Booking.objects.count(), 2)
+
+	def test_successful_booking_adds_owner_fee_and_cancellation_waives_unpaid_fee(self):
+		response = self.post_booking(self.ground, self.slot)
+		self.assertEqual(response.status_code, 200)
+		booking = Booking.objects.get()
+		self.assertEqual(booking.platform_fee_amount, Decimal('100.00'))
+		self.assertEqual(booking.platform_fee_status, 'DUE')
+
+		self.client.post(reverse('cancel_booking', args=[booking.booking_id]))
+		booking.refresh_from_db()
+		self.assertEqual(booking.status, 'CANCELLED')
+		self.assertEqual(booking.platform_fee_status, 'WAIVED')
 
 	def test_booking_rejects_a_slot_belonging_to_another_ground(self):
 		response = self.post_booking(self.ground, self.other_ground_slot)
@@ -155,8 +183,44 @@ class GroundBookingAvailabilityTests(TestCase):
 		self.assertEqual(response['Cache-Control'], 'no-store')
 
 	def test_ground_detail_renders_its_configured_slot(self):
-		response = self.client.get(reverse('ground_detail', args=[self.ground.id]))
+		response = self.client.get(reverse('ground_detail', args=[self.ground.id]), {
+			'date': self.booking_date.isoformat(),
+		})
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, '10:00 AM - 12:00 PM')
 		self.assertContains(response, f'data-slot-id="{self.slot.id}"')
+
+	def test_ground_slot_is_not_shown_on_a_different_date(self):
+		response = self.client.get(reverse('ground_detail', args=[self.ground.id]), {
+			'date': timezone.localdate().isoformat(),
+		})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertNotContains(response, f'data-slot-id="{self.slot.id}"')
+
+	def test_owner_can_save_same_range_for_two_separate_dates(self):
+		owner = self.ground.owner
+		data = GroundFormTests().ground_form_data()
+		data['schedule_date'] = timezone.localdate().isoformat()
+		form = GroundForm(data=data, instance=self.ground)
+		self.assertTrue(form.is_valid(), form.errors)
+		ground = form.save(commit=False)
+		ground.save()
+		form.save_m2m()
+
+		data['schedule_date'] = (self.booking_date + timedelta(days=1)).isoformat()
+		form = GroundForm(data=data, instance=ground)
+		self.assertTrue(form.is_valid(), form.errors)
+		ground = form.save(commit=False)
+		ground.save()
+		form.save_m2m()
+
+		self.assertEqual(
+			ground.time_slots.filter(
+				slot_date__in=[timezone.localdate(), self.booking_date + timedelta(days=1)],
+				start_time=time(10),
+				end_time=time(12),
+			).count(),
+			2,
+		)

@@ -63,6 +63,7 @@ class Ground(models.Model):
 
 class TimeSlot(models.Model):
     ground = models.ForeignKey(Ground, on_delete=models.CASCADE, related_name='time_slots', null=True, blank=True)
+    slot_date = models.DateField(null=True, blank=True, db_index=True)
     start_time = models.TimeField()
     end_time = models.TimeField()
     slot_label = models.CharField(max_length=50) # e.g. 06:00 AM - 07:00 AM
@@ -72,8 +73,8 @@ class TimeSlot(models.Model):
         ordering = ['start_time']
         constraints = [
             models.UniqueConstraint(
-                fields=['ground', 'start_time', 'end_time'],
-                name='unique_ground_time_range',
+                fields=['ground', 'slot_date', 'start_time', 'end_time'],
+                name='unique_ground_date_time_range',
             ),
         ]
 
@@ -87,6 +88,11 @@ class TimeSlot(models.Model):
         return Decimal(end_minutes - start_minutes) / Decimal(60)
 
 class Booking(models.Model):
+    PLATFORM_FEE_STATUS_CHOICES = (
+        ('DUE', 'Due'),
+        ('SETTLED', 'Settled'),
+        ('WAIVED', 'Waived'),
+    )
     STATUS_CHOICES = (
         ('CONFIRMED', 'Confirmed'),
         ('COMPLETED', 'Completed'),
@@ -101,6 +107,9 @@ class Booking(models.Model):
     slot = models.ForeignKey(TimeSlot, on_delete=models.CASCADE, related_name='bookings')
     
     total_price = models.DecimalField(max_digits=8, decimal_places=2)
+    platform_fee_amount = models.DecimalField(max_digits=7, decimal_places=2, default=Decimal('0.00'))
+    platform_fee_status = models.CharField(max_length=10, choices=PLATFORM_FEE_STATUS_CHOICES, default='WAIVED')
+    platform_fee_settled_at = models.DateTimeField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='CONFIRMED')
     notes = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

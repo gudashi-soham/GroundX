@@ -15,6 +15,15 @@ class GroundForm(forms.ModelForm):
         }),
         required=True
     )
+    schedule_date = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'class': 'form-input',
+            'type': 'date',
+            'min': timezone.localdate().isoformat(),
+        }),
+        label='Date for These Slots',
+        required=True,
+    )
     time_slots = forms.CharField(
         widget=forms.Textarea(attrs={
             'class': 'form-input',
@@ -27,13 +36,20 @@ class GroundForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.initial.setdefault('schedule_date', timezone.localdate())
         if self.instance.pk and not self.is_bound:
             self.initial['sports'] = ', '.join(
                 self.instance.sports.values_list('name', flat=True)
             )
+            selected_date = self.initial['schedule_date']
+            if isinstance(selected_date, str):
+                selected_date = forms.DateField().to_python(selected_date)
             self.initial['time_slots'] = '\n'.join(
                 f'{slot.start_time:%H:%M}-{slot.end_time:%H:%M}'
-                for slot in self.instance.time_slots.filter(is_active=True)
+                for slot in self.instance.time_slots.filter(
+                    slot_date=selected_date,
+                    is_active=True,
+                )
             )
 
     def clean_sports(self):
@@ -44,6 +60,12 @@ class GroundForm(forms.ModelForm):
         if any(len(name) > 50 for name in names):
             raise ValidationError('Each sport name must be 50 characters or fewer.')
         return ', '.join(names)
+
+    def clean_schedule_date(self):
+        schedule_date = self.cleaned_data['schedule_date']
+        if schedule_date < timezone.localdate():
+            raise ValidationError('Choose today or a future date for these slots.')
+        return schedule_date
 
     def clean_time_slots(self):
         raw_slots = self.cleaned_data['time_slots']
@@ -72,8 +94,9 @@ class GroundForm(forms.ModelForm):
 
         if self.instance.pk:
             reserved_ranges = self.instance.time_slots.filter(
+                slot_date=self.cleaned_data['schedule_date'],
                 bookings__status='CONFIRMED',
-                bookings__booking_date__gte=timezone.localdate(),
+                bookings__booking_date=self.cleaned_data['schedule_date'],
             ).distinct().values_list('start_time', 'end_time')
             for reserved_range in reserved_ranges:
                 if reserved_range not in ranges:
@@ -101,17 +124,22 @@ class GroundForm(forms.ModelForm):
             sports.append(sport)
         self.instance.sports.set(sports)
 
+        schedule_date = self.cleaned_data['schedule_date']
         for slot in self.cleaned_data['time_slots']:
             start_time, end_time = slot
             label = f'{start_time.strftime("%I:%M %p")} - {end_time.strftime("%I:%M %p")}'
             self.instance.time_slots.update_or_create(
+            slot_date=schedule_date,
                 start_time=start_time,
                 end_time=end_time,
                 defaults={'slot_label': label, 'is_active': True},
             )
         requested_ranges = self.cleaned_data['time_slots']
         requested_ranges = set(requested_ranges)
-        for existing_slot in self.instance.time_slots.filter(is_active=True):
+        for existing_slot in self.instance.time_slots.filter(
+            slot_date=schedule_date,
+            is_active=True,
+        ):
             if (existing_slot.start_time, existing_slot.end_time) not in requested_ranges:
                 existing_slot.is_active = False
                 existing_slot.save(update_fields=['is_active'])
