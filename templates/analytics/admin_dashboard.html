@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+{% extends 'admin_base.html' %}
 {% block title %}Admin Control Room | GroundX{% endblock %}
-{% block content %}
+{% block admin_content %}
 <section class="admin-page">
     <div class="admin-heading">
         <div><p class="eyebrow">GroundX management</p><h1>Admin control room</h1><p>Owner approvals and business performance at a glance.</p></div>
@@ -11,8 +11,8 @@
         <article class="admin-stat"><span>Active owners</span><strong>{{ active_owner_count }}</strong><i class="fa-solid fa-user-check"></i></article>
         <article class="admin-stat"><span>Active grounds</span><strong>{{ active_ground_count }}</strong><i class="fa-solid fa-futbol"></i></article>
         <article class="admin-stat"><span>Bookings</span><strong>{{ booking_count }}</strong><i class="fa-solid fa-calendar-check"></i></article>
-        <article class="admin-stat"><span>Booking value · 12 months</span><strong>₹{{ monthly_revenue|floatformat:0 }}</strong><i class="fa-solid fa-indian-rupee-sign"></i></article>
-        <article class="admin-stat"><span>Owner fees outstanding</span><strong>₹{{ platform_fees_due|floatformat:2 }}</strong><i class="fa-solid fa-receipt"></i></article>
+        <article class="admin-stat admin-stat--icon-label"><div class="admin-stat-title"><span>Booking value · 12 months</span><i class="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i></div><strong>₹{{ monthly_revenue|floatformat:0 }}</strong></article>
+        <article class="admin-stat admin-stat--icon-label"><div class="admin-stat-title"><span>Owner fees outstanding</span><i class="fa-solid fa-receipt" aria-hidden="true"></i></div><strong>₹{{ platform_fees_due|floatformat:2 }}</strong></article>
     </div>
 
     <div class="admin-chart-grid">

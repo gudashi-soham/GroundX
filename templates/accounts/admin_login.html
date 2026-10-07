@@ -1,0 +1,27 @@
+{% extends 'admin_base.html' %}
+{% block title %}Administrator Sign In | GroundX{% endblock %}
+{% block admin_content %}
+<section class="admin-login-page">
+    <div class="admin-login-card">
+        <span class="admin-login-icon"><i class="fa-solid fa-shield-halved"></i></span>
+        <p class="eyebrow">Restricted access</p>
+        <h1>Administrator sign in</h1>
+        <p class="admin-login-description">Use your GroundX superuser account to open the private control room.</p>
+
+        <form method="post" class="admin-login-form">
+            {% csrf_token %}
+            <div class="form-field-group">
+                <label class="field-label" for="id_username">Username</label>
+                {{ form.username }}
+            </div>
+            <div class="form-field-group">
+                <label class="field-label" for="id_password">Password</label>
+                {{ form.password }}
+            </div>
+            {% if form.non_field_errors %}<div class="auth-errors">{{ form.non_field_errors }}</div>{% endif %}
+            <button type="submit" class="btn-primary-block">Sign in to admin portal <i class="fa-solid fa-arrow-right"></i></button>
+        </form>
+        <a class="admin-login-back" href="{% url 'login' %}"><i class="fa-solid fa-arrow-left"></i> Back to player and owner sign in</a>
+    </div>
+</section>
+{% endblock %}

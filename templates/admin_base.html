@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GroundX Admin{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=4">
+</head>
+<body class="admin-portal-body">
+    <header class="admin-portal-header">
+        <a class="admin-portal-brand" href="{% if user.is_authenticated and user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'admin_login' %}{% endif %}">
+            <img src="/static/img/groundx-logo.png" alt="GroundX">
+            <span>GroundX <b>Admin</b></span>
+        </a>
+        {% if user.is_authenticated and user.is_superuser %}
+        <nav class="admin-portal-nav" aria-label="Administrator navigation">
+            <a href="{% url 'admin_dashboard' %}"><i class="fa-solid fa-chart-line"></i> Control room</a>
+            <a href="/admin/"><i class="fa-solid fa-screwdriver-wrench"></i> Django admin</a>
+            <a href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Sign out</a>
+        </nav>
+        {% endif %}
+    </header>
+
+    {% if messages %}
+    <div class="toast-container">
+        {% for message in messages %}
+        <div class="toast-alert toast-{{ message.tags }}">
+            <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% elif message.tags == 'error' %}fa-circle-xmark{% else %}fa-circle-info{% endif %}"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="admin-portal-main">
+        {% block admin_content %}{% endblock %}
+    </main>
+</body>
+</html>

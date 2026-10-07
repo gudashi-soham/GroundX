@@ -36,6 +36,8 @@ def register_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
+        if request.user.is_superuser:
+            return redirect('admin_dashboard')
         if request.user.is_owner() and request.user.is_owner_approved:
             return redirect('owner_home')
         return redirect('home')
@@ -49,6 +51,8 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+            if user.is_superuser:
+                return redirect('admin_dashboard')
             next_url = request.GET.get('next') or request.POST.get('next')
             if next_url:
                 return redirect(next_url)
@@ -76,6 +80,27 @@ def login_view(request):
         'role': current_role,
         'is_owner_login': (current_role == 'OWNER')
     })
+
+def admin_login_view(request):
+    if request.user.is_authenticated:
+        if request.user.is_superuser:
+            return redirect('admin_dashboard')
+        messages.info(request, 'Sign out of your current account before signing in as an administrator.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = UserLoginForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            if user.is_superuser:
+                login(request, user)
+                messages.success(request, 'Administrator sign-in successful.')
+                return redirect('admin_dashboard')
+            messages.error(request, 'This account does not have administrator access.')
+    else:
+        form = UserLoginForm()
+
+    return render(request, 'accounts/admin_login.html', {'form': form})
 
 def owner_login_view(request):
     if request.user.is_authenticated:

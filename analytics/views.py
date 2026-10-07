@@ -29,7 +29,7 @@ def owner_analytics_view(request):
     return render(request, 'analytics/dashboard.html', {'analytics': analytics_data})
 
 
-@login_required
+@login_required(login_url='admin_login')
 def admin_dashboard_view(request):
     if not request.user.is_superuser:
         messages.error(request, 'Administrator access is required.')
@@ -38,7 +38,7 @@ def admin_dashboard_view(request):
     return render(request, 'analytics/admin_dashboard.html', context)
 
 
-@login_required
+@login_required(login_url='admin_login')
 @require_POST
 def owner_approval_view(request, user_id):
     if not request.user.is_superuser:
@@ -52,7 +52,7 @@ def owner_approval_view(request, user_id):
     return redirect('admin_dashboard')
 
 
-@login_required
+@login_required(login_url='admin_login')
 @require_POST
 def settle_owner_fees_view(request, user_id):
     if not request.user.is_superuser:
