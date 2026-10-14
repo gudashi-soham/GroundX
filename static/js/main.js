@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (selectedSlotInput) selectedSlotInput.value = slotId;
                 if (sumSlotLabel) sumSlotLabel.innerHTML = `Selected Slot: <strong>${slotTime}</strong>`;
-                if (sumRateLabel) sumRateLabel.textContent = `Total: ₹${(hourlyRate * durationHours).toFixed(0)} (${durationHours} hours)`;
+                if (sumRateLabel) sumRateLabel.textContent = `Total: \u20B9${(hourlyRate * durationHours).toFixed(0)} (${durationHours} hours)`;
                 if (btnSubmitBooking) btnSubmitBooking.removeAttribute('disabled');
             });
         });
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             element.classList.remove('selected');
                             if (selectedSlotInput) selectedSlotInput.value = '';
                             if (sumSlotLabel) sumSlotLabel.textContent = 'Select a slot above';
-                            if (sumRateLabel) sumRateLabel.textContent = `Select a slot to see the total. Rate: ₹${hourlyRate}/hour`;
+                            if (sumRateLabel) sumRateLabel.textContent = `Select a slot to see the total. Rate: \u20B9${hourlyRate}/hour`;
                             if (btnSubmitBooking) btnSubmitBooking.disabled = true;
                         }
                     } else {
@@ -96,5 +96,90 @@ document.addEventListener('DOMContentLoaded', () => {
         locModal.addEventListener('click', (e) => {
             if (e.target === locModal) closeModal();
         });
+    }
+});
+// Equipment selection and itemized booking total.
+document.addEventListener('DOMContentLoaded', () => {
+    const inputs = [...document.querySelectorAll('[data-equipment-quantity]')];
+    const slots = [...document.querySelectorAll('.slot-btn')];
+    const rateLabel = document.getElementById('sumRateLabel');
+    if (!inputs.length || !rateLabel) return;
+
+    const hourlyRate = Number(rateLabel.dataset.hourlyRate || 0);
+    let selectedDuration = 0;
+
+    const updateTotal = () => {
+        const groundTotal = hourlyRate * selectedDuration;
+        const equipmentTotal = inputs.reduce((sum, input) =>
+            sum + Number(input.value || 0) * Number(input.dataset.unitPrice || 0), 0);
+        if (selectedDuration) {
+            rateLabel.textContent = 'Ground: \u20B9' + groundTotal.toFixed(2) +
+                ' + Equipment: \u20B9' + equipmentTotal.toFixed(2) +
+                ' = Total: \u20B9' + (groundTotal + equipmentTotal).toFixed(2);
+        }
+    };
+
+    const applyAvailability = (slot, availability) => {
+        inputs.forEach((input) => {
+            const itemId = input.dataset.equipmentId;
+            const remaining = Math.max(0, Number(availability[itemId] ?? input.dataset.stockQuantity ?? 0));
+            input.max = String(remaining);
+            input.disabled = remaining === 0;
+            if (Number(input.value) > remaining) input.value = String(remaining);
+            const stockLabel = input.closest('[data-equipment-item]')?.querySelector('[data-equipment-stock-label]');
+            if (stockLabel) {
+                stockLabel.textContent = remaining
+                    ? remaining + ' available for this slot'
+                    : 'None available for this slot';
+            }
+        });
+        selectedDuration = Number(slot.dataset.durationHours || 1);
+        updateTotal();
+    };
+
+    inputs.forEach((input) => {
+        input.addEventListener('input', () => {
+            const maximum = Number(input.max || input.dataset.stockQuantity || 0);
+            const requested = Number(input.value || 0);
+            if (requested > maximum) {
+                input.value = String(maximum);
+                const stockLabel = input.closest('[data-equipment-item]')?.querySelector('[data-equipment-stock-label]');
+                if (stockLabel) stockLabel.textContent = 'Maximum ' + maximum + ' available for this slot';
+            } else if (requested < 0) {
+                input.value = '0';
+            }
+            updateTotal();
+        });
+    });
+    slots.forEach((slot) => {
+        slot.addEventListener('click', () => {
+            if (slot.disabled) return;
+            let availability = {};
+            try {
+                availability = JSON.parse(slot.dataset.equipmentAvailability || '{}');
+            } catch (error) {
+                console.error('Could not read equipment availability.', error);
+            }
+            applyAvailability(slot, availability);
+        });
+    });
+
+    const availabilityGrid = document.querySelector('[data-availability-url]');
+    if (availabilityGrid) {
+        window.setInterval(async () => {
+            const selected = slots.find((slot) => slot.classList.contains('selected'));
+            if (!selected) return;
+            const url = new URL(availabilityGrid.dataset.availabilityUrl, window.location.origin);
+            url.searchParams.set('date', availabilityGrid.dataset.bookingDate);
+            try {
+                const response = await fetch(url);
+                if (!response.ok) return;
+                const payload = await response.json();
+                const state = payload.slots.find((slot) => String(slot.id) === selected.dataset.slotId);
+                if (state?.equipment_available) applyAvailability(selected, state.equipment_available);
+            } catch (error) {
+                console.error('Could not refresh equipment stock.', error);
+            }
+        }, 10000);
     }
 });

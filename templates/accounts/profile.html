@@ -16,7 +16,10 @@
         </div>
 
         <div style="margin-top: 24px;">
-            <a href="{% url 'logout' %}" class="btn-cancel-booking"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</a>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-cancel-booking"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button>
+            </form>
         </div>
     </div>
 </div>

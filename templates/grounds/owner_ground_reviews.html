@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ ground.name }} Reviews - GroundX{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper owner-reviews-page">
+    <div class="owner-reviews-topbar">
+        <a href="{% url 'owner_dashboard' %}" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+        <span class="owner-readonly-badge"><i class="fa-solid fa-eye"></i> Read-only view</span>
+    </div>
+
+    <section class="owner-reviews-summary">
+        <div class="owner-reviews-ground">
+            <p class="reviews-eyebrow">PLAYER FEEDBACK</p>
+            <h1>{{ ground.name }}</h1>
+            <p><i class="fa-solid fa-location-dot"></i> {{ ground.address }}, {{ ground.city }}</p>
+        </div>
+        <div class="owner-review-stats">
+            <div class="owner-review-average">
+                <i class="fa-solid fa-star"></i>
+                <strong>{% if average_rating %}{{ average_rating|floatformat:1 }}{% else %}N/A{% endif %}</strong>
+                <span>Average rating</span>
+            </div>
+            <div class="owner-review-total">
+                <strong>{{ review_count }}</strong>
+                <span>Player review{{ review_count|pluralize }}</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="owner-review-list-panel">
+        <div class="owner-review-list-heading">
+            <div>
+                <h2>Reviews for this ground</h2>
+                <p>Feedback left by players after their booked sessions.</p>
+            </div>
+        </div>
+
+        <div class="owner-review-list">
+            {% for review in reviews %}
+            <article class="owner-review-card">
+                <div class="owner-review-card-header">
+                    <div class="review-author">
+                        <span class="review-avatar">{{ review.author.first_name|default:review.author.username|first|upper }}</span>
+                        <div>
+                            <strong>{{ review.author.first_name|default:review.author.username }}</strong>
+                            <span class="review-date">Played {{ review.booking.booking_date|date:"M d, Y" }} | Reviewed {{ review.created_at|date:"M d, Y" }}</span>
+                        </div>
+                    </div>
+                    <span class="review-rating" aria-label="{{ review.rating }} out of 5 stars">
+                        {% for star in "12345" %}
+                            {% if forloop.counter <= review.rating %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}
+                        {% endfor %}
+                        <span>{{ review.rating }}/5</span>
+                    </span>
+                </div>
+                <p class="owner-review-comment">{{ review.comment|linebreaksbr }}</p>
+                <div class="owner-review-booking">Booking #{{ review.booking.booking_id }} | {{ review.booking.slot.slot_label }}</div>
+            </article>
+            {% empty %}
+            <div class="owner-reviews-empty">
+                <span><i class="fa-regular fa-comment-dots"></i></span>
+                <h3>No reviews yet</h3>
+                <p>Player reviews for {{ ground.name }} will appear here after they share feedback.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

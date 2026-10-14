@@ -13,7 +13,7 @@
         <form method="POST" enctype="multipart/form-data" class="ground-crud-form">
             {% csrf_token %}
 
-            {% if form.errors %}
+            {% if form.errors or equipment_formset.errors %}
             <div class="form-error-summary" role="alert">
                 <strong>Please correct the following fields:</strong>
                 <ul>
@@ -24,6 +24,16 @@
                     {% endfor %}
                     {% for error in form.non_field_errors %}
                     <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for error in equipment_formset.non_form_errors %}
+                    <li>Equipment: {{ error }}</li>
+                    {% endfor %}
+                    {% for equipment_form in equipment_formset %}
+                        {% for field in equipment_form %}
+                            {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
                     {% endfor %}
                 </ul>
             </div>
@@ -52,7 +62,7 @@
             </div>
 
             <div class="form-field-group">
-                <label class="field-label">Hourly Rate (₹) *</label>
+                <label class="field-label">Hourly Rate (&#8377;) *</label>
                 {{ form.hourly_rate }}
             </div>
 
@@ -83,6 +93,31 @@
                 <label class="field-label">Supported Sports *</label>
                 {{ form.sports }}
             </div>
+
+            <section class="equipment-editor-section">
+                <div class="equipment-editor-heading">
+                    <span class="equipment-editor-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+                    <div>
+                        <h3>Rentable equipment</h3>
+                        <p>Add each item as its own row. Players choose each item and price separately.</p>
+                    </div>
+                </div>
+                <p class="equipment-editor-note"><i class="fa-solid fa-circle-info"></i> Set the rental price per item, per booked slot. Update prices and stock here whenever needed.</p>
+                <div class="equipment-formset" id="equipment-formset">
+                    {{ equipment_formset.management_form }}
+                    {% for equipment_form in equipment_formset %}
+                        {% include 'grounds/_equipment_form_row.html' with equipment_form=equipment_form equipment_formset=equipment_formset %}
+                    {% endfor %}
+                </div>
+                <template id="equipment-empty-form">
+                    {% with equipment_form=equipment_formset.empty_form %}
+                        {% include 'grounds/_equipment_form_row.html' with equipment_form=equipment_form equipment_formset=equipment_formset %}
+                    {% endwith %}
+                </template>
+                <button type="button" class="btn-add-equipment" id="add-equipment-form">
+                    <i class="fa-solid fa-plus"></i> Add equipment
+                </button>
+            </section>
 
             <div class="form-grid-2">
                 <div class="form-field-group">
@@ -117,4 +152,44 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const formset = document.getElementById('equipment-formset');
+    const template = document.getElementById('equipment-empty-form');
+    const addButton = document.getElementById('add-equipment-form');
+    if (!formset || !template || !addButton) return;
+
+    const totalForms = formset.querySelector('input[name$="-TOTAL_FORMS"]');
+    addButton.addEventListener('click', () => {
+        const row = template.content.firstElementChild.cloneNode(true);
+        row.innerHTML = row.innerHTML.replace(/__prefix__/g, totalForms.value);
+        formset.appendChild(row);
+        totalForms.value = Number(totalForms.value) + 1;
+        const nameInput = row.querySelector('input[name$="-name"]');
+        if (nameInput) nameInput.focus();
+    });
+
+    formset.addEventListener('change', (event) => {
+        if (!event.target.matches('.equipment-category')) return;
+        const iconByCategory = {
+            cricket: 'fa-baseball-bat-ball',
+            football: 'fa-futbol',
+            volleyball: 'fa-volleyball',
+            basketball: 'fa-basketball',
+            badminton: 'fa-feather',
+            tennis: 'fa-table-tennis-paddle-ball',
+            protective: 'fa-shield-halved',
+            other: 'fa-box-open',
+        };
+        const row = event.target.closest('.equipment-form-row');
+        const icon = row.querySelector('.equipment-type-icon');
+        icon.className = 'fa-solid ' + (iconByCategory[event.target.value] || iconByCategory.other) + ' equipment-type-icon';
+    });
+    formset.querySelectorAll('.equipment-category').forEach((select) => select.dispatchEvent(new Event('change', { bubbles: true })));
+});
+</script>
 {% endblock %}

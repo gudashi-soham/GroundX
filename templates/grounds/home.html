@@ -3,7 +3,7 @@
 {% block title %}GroundX - Find Your Perfect Pitch{% endblock %}
 
 {% block content %}
-<div class="screen-wrapper">
+<div class="screen-wrapper home-screen-wrapper">
     <!-- Top Location Selector Bar (Matching Screenshot 1) -->
     <div class="location-header-bar">
         <div class="loc-dropdown-wrapper">
@@ -34,27 +34,12 @@
                 <button type="button" class="modal-close" id="closeLocModal">&times;</button>
             </div>
             <div class="modal-cities-list">
-                <a href="?city=kolhapur" class="city-item {% if current_city == 'Kolhapur' %}active{% endif %}">
-                    <i class="fa-solid fa-city"></i> Kolhapur (Maharashtra)
+                {% for city in available_cities %}
+                <a href="?city={{ city|urlencode }}" class="city-item {% if current_city|lower == city|lower %}active{% endif %}">
+                    <i class="fa-solid fa-city"></i> {{ city }}
                 </a>
-                <a href="?city=london" class="city-item {% if current_city == 'London' %}active{% endif %}">
-                    <i class="fa-solid fa-building-columns"></i> London (UK)
-                </a>
-                <a href="?city=pune" class="city-item {% if current_city == 'Pune' %}active{% endif %}">
-                    <i class="fa-solid fa-tree-city"></i> Pune
-                </a>
-                <a href="?city=mumbai" class="city-item {% if current_city == 'Mumbai' %}active{% endif %}">
-                    <i class="fa-solid fa-water"></i> Mumbai
-                </a>
+                {% endfor %}
             </div>
-            <div class="place-search-group">
-                <label for="placeSearchInput">Or search for an address or place</label>
-                <input id="placeSearchInput" type="text" placeholder="Enter a city, area, or landmark" autocomplete="off">
-                <small id="placeSearchStatus" aria-live="polite"></small>
-            </div>
-            <button class="btn-use-gps" id="modalGpsBtn">
-                <i class="fa-solid fa-location-crosshairs"></i> Use Live GPS Coordinates
-            </button>
         </div>
     </div>
 
@@ -65,6 +50,7 @@
         
         <!-- Search Input Bar (Matching Screenshot 1) -->
         <form action="{% url 'search' %}" method="GET" class="search-bar-form">
+            <input type="hidden" name="city" value="{{ current_city }}">
             <div class="search-input-box">
                 <i class="fa-solid fa-magnifying-glass search-lens"></i>
                 <input type="text" name="q" value="{{ search_query }}" placeholder="Search by name or sport..." class="search-input">
@@ -79,11 +65,11 @@
     <section class="sports-chips-section">
         <h2 class="section-heading">Sports</h2>
         <div class="sports-pill-scroll">
-            <a href="?sport=all{% if search_query %}&q={{ search_query }}{% endif %}" class="sport-pill {% if selected_sport == 'all' or not selected_sport %}active{% endif %}">
+        <a href="?city={{ current_city|urlencode }}&sport=all{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="sport-pill {% if selected_sport == 'all' or not selected_sport %}active{% endif %}">
                 All Sports
             </a>
             {% for sport in sports %}
-            <a href="?sport={{ sport.slug }}{% if search_query %}&q={{ search_query }}{% endif %}" class="sport-pill {% if selected_sport == sport.slug %}active{% endif %}">
+            <a href="?city={{ current_city|urlencode }}&sport={{ sport.slug }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="sport-pill {% if selected_sport == sport.slug %}active{% endif %}">
                 {% if sport.slug == 'cricket' %}
                     <i class="fa-solid fa-baseball-bat-ball"></i>
                 {% elif sport.slug == 'football' %}
@@ -107,7 +93,7 @@
     <section class="featured-grounds-section">
         <div class="section-header-flex">
             <h2 class="section-heading">Featured Grounds</h2>
-            <a href="{% url 'search' %}" class="see-all-link">See all ({{ all_grounds_count }})</a>
+            <a href="{% url 'search' %}?city={{ current_city|urlencode }}" class="see-all-link">See all ({{ all_grounds_count }})</a>
         </div>
 
         <div class="grounds-scroll-container">
@@ -166,11 +152,4 @@
         </div>
     </section>
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-    {{ block.super }}
-    {% if google_maps_api_key %}
-    <script async src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key|urlencode }}&libraries=places&loading=async&callback=initGroundXPlaces"></script>
-    {% endif %}
 {% endblock %}

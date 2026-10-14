@@ -3,7 +3,7 @@
 {% block title %}Search Pitches & Courts - GroundX{% endblock %}
 
 {% block content %}
-<div class="screen-wrapper">
+<div class="screen-wrapper search-screen-wrapper">
     <!-- Search Top Controls (Matching Screenshot 2) -->
     <div class="search-top-bar">
         <!-- Location Pill Button -->
@@ -14,6 +14,7 @@
 
         <!-- Search Input Bar with Filter Icon -->
         <form action="{% url 'search' %}" method="GET" class="search-header-form">
+            <input type="hidden" name="city" value="{{ current_city }}">
             <div class="search-bar-rounded">
                 <i class="fa-solid fa-magnifying-glass search-ico"></i>
                 <input type="text" name="q" value="{{ search_query }}" placeholder="Football pitches in {{ current_city }}..." class="search-field">
@@ -24,13 +25,40 @@
         </form>
     </div>
 
+    <div class="location-modal-backdrop" id="locationModal">
+        <div class="location-modal-card">
+            <div class="modal-header">
+                <h3>Select Your City</h3>
+                <button type="button" class="modal-close" id="closeLocModal">&times;</button>
+            </div>
+            <div class="modal-cities-list">
+                {% for city in available_cities %}
+                <a href="?city={{ city|urlencode }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if selected_sport %}&sport={{ selected_sport|urlencode }}{% endif %}" class="city-item {% if current_city|lower == city|lower %}active{% endif %}">
+                    <i class="fa-solid fa-city"></i> {{ city }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <form action="{% url 'search' %}" method="GET" class="city-filter-form">
+        <label for="cityFilter">City</label>
+        <select id="cityFilter" name="city" onchange="this.form.submit()">
+            {% for city in available_cities %}
+            <option value="{{ city }}" {% if current_city|lower == city|lower %}selected{% endif %}>{{ city }}</option>
+            {% endfor %}
+        </select>
+        {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+        {% if selected_sport %}<input type="hidden" name="sport" value="{{ selected_sport }}">{% endif %}
+    </form>
+
     <!-- Sports Pills Filter Bar (Matching Screenshot 2: All, Football, Tennis, Basketball...) -->
     <div class="sports-pill-scroll pill-row-compact">
-        <a href="?sport=all{% if search_query %}&q={{ search_query }}{% endif %}" class="sport-pill-sm {% if selected_sport == 'all' or not selected_sport %}active{% endif %}">
+        <a href="?city={{ current_city|urlencode }}&sport=all{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="sport-pill-sm {% if selected_sport == 'all' or not selected_sport %}active{% endif %}">
             All
         </a>
         {% for sport in sports %}
-        <a href="?sport={{ sport.slug }}{% if search_query %}&q={{ search_query }}{% endif %}" class="sport-pill-sm {% if selected_sport == sport.slug %}active{% endif %}">
+        <a href="?city={{ current_city|urlencode }}&sport={{ sport.slug }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="sport-pill-sm {% if selected_sport == sport.slug %}active{% endif %}">
             {% if sport.slug == 'football' %}
                 <i class="fa-solid fa-futbol"></i>
             {% elif sport.slug == 'tennis' %}
@@ -52,7 +80,7 @@
         {% for item in grounds %}
         {% with g=item.instance dist=item.distance_km %}
         <div class="vertical-ground-card">
-            <!-- Media with Ribbon, Wishlist & Dots -->
+            <!-- Media with Ground Badge -->
             <div class="vertical-card-media">
                 <img src="{{ g.get_display_image }}" alt="{{ g.name }}" class="vertical-card-img" loading="lazy">
                 
@@ -62,9 +90,6 @@
                 </div>
                 {% endif %}
 
-                <button class="btn-wishlist" onclick="this.classList.toggle('active')" title="Save to Favorites">
-                    <i class="fa-regular fa-heart"></i>
-                </button>
             </div>
 
             <!-- Card Content Details -->

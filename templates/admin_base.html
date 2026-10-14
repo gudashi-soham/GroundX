@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/style.css?v=4">
+    <link rel="stylesheet" href="/static/css/style.css?v=10">
 </head>
 <body class="admin-portal-body">
     <header class="admin-portal-header">
@@ -21,7 +21,10 @@
         <nav class="admin-portal-nav" aria-label="Administrator navigation">
             <a href="{% url 'admin_dashboard' %}"><i class="fa-solid fa-chart-line"></i> Control room</a>
             <a href="/admin/"><i class="fa-solid fa-screwdriver-wrench"></i> Django admin</a>
-            <a href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Sign out</a>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+            </form>
         </nav>
         {% endif %}
     </header>

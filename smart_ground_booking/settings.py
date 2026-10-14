@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import pymysql
+from django.core.exceptions import ImproperlyConfigured
 
 # PyMySQL integration for MySQL support
 pymysql.install_as_MySQLdb()
@@ -8,14 +9,22 @@ pymysql.install_as_MySQLdb()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-smart-ground-booking-secret-key-2026'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'true').strip().lower() in {'1', 'true', 'yes', 'on'}
 
-DEBUG = True
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured('Set DJANGO_SECRET_KEY when DEBUG is disabled.')
+    SECRET_KEY = 'dev-only-insecure-secret-key-do-not-deploy'
 
 # Google Places key for the location picker. Set this in the environment when ready.
 GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+    if host.strip()
+]
 
 # Application definition
 INSTALLED_APPS = [
@@ -62,21 +71,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'smart_ground_booking.wsgi.application'
 
-# Database Configuration (MySQL)
+# Database Configuration (MySQL). Local defaults keep the developer setup usable;
+# deployments should set DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, and DB_PORT.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'smart_ground_db',
-        'USER': 'root',
-        'PASSWORD': 'root',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
+        'NAME': os.environ.get('DB_NAME', 'smart_ground_db'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'root'),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'charset': 'utf8mb4',
         },
     }
 }
+if not DEBUG and not all(os.environ.get(name) for name in ('DB_NAME', 'DB_USER', 'DB_PASSWORD')):
+    raise ImproperlyConfigured('Set DB_NAME, DB_USER, and DB_PASSWORD when DEBUG is disabled.')
+if not DEBUG and not os.environ.get('DJANGO_ALLOWED_HOSTS'):
+    raise ImproperlyConfigured('Set DJANGO_ALLOWED_HOSTS when DEBUG is disabled.')
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
@@ -84,8 +98,17 @@ AUTH_USER_MODEL = 'accounts.User'
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {'min_length': 4},
+        'OPTIONS': {'min_length': 8},
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 

@@ -3,7 +3,7 @@
 {% block title %}My Bookings - GroundX{% endblock %}
 
 {% block content %}
-<div class="screen-wrapper">
+<div class="screen-wrapper bookings-screen-wrapper">
     <div class="page-title-row">
         <h2><i class="fa-solid fa-calendar-check" style="color: #10B981;"></i> My Bookings</h2>
         <span class="counter-badge">{{ bookings|length }} Reservations</span>
@@ -38,19 +38,33 @@
                     <i class="fa-solid fa-futbol"></i>
                     <span>Sport: {{ b.sport.name }}</span>
                 </div>
+                {% for item in b.equipment_items.all %}
+                <div class="b-info-line booking-equipment-line">
+                    <i class="fa-solid {{ item.equipment.icon_class|default:'fa-box-open' }}"></i>
+                    <span>{{ item.equipment_name }} × {{ item.quantity }} · ₹{{ item.line_total|floatformat:2 }}</span>
+                </div>
+                {% endfor %}
             </div>
 
             <div class="bcard-footer">
                 <div class="b-price-col">
                     <span class="b-price-sub">Paid</span>
-                    <span class="b-price-amt">₹{{ b.total_price|floatformat:0 }}</span>
+                    <span class="b-price-amt">Ground ₹{{ b.ground_price|floatformat:2 }}<br>Equipment ₹{{ b.equipment_total|floatformat:2 }}<br>Total ₹{{ b.total_price|floatformat:2 }}</span>
                 </div>
 
                 {% if b.status == 'CONFIRMED' %}
-                <form action="{% url 'cancel_booking' b.booking_id %}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this booking?');">
+                    {% if b.can_cancel %}
+                <form action="{% url 'cancel_booking' b.booking_id %}" method="POST" class="cancel-booking-form" onsubmit="return confirm('Are you sure you want to cancel this booking?');">
                     {% csrf_token %}
+                    <label for="cancel-reason-{{ b.booking_id }}">Reason for cancellation</label>
+                    <textarea id="cancel-reason-{{ b.booking_id }}" name="reason" rows="2" maxlength="500" placeholder="Tell the ground owner why you are cancelling..." required></textarea>
                     <button type="submit" class="btn-cancel-booking">Cancel Booking</button>
                 </form>
+                    {% else %}
+                <span class="cancellation-window-closed"><i class="fa-regular fa-clock"></i> Cancellation window closed</span>
+                    {% endif %}
+                {% elif b.status == 'CANCELLED' and b.cancellation_reason %}
+                <div class="player-cancellation-reason"><strong>Your cancellation reason:</strong> {{ b.cancellation_reason }}</div>
                 {% endif %}
             </div>
         </div>

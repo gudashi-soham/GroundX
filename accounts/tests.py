@@ -24,7 +24,7 @@ class OwnerLoginTests(TestCase):
         """Login page should render tabs for both Player and Turf Owner."""
         response = self.client.get(reverse('login'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Player / User')
+        self.assertContains(response, 'Player')
         self.assertContains(response, 'Turf Owner')
         self.assertContains(response, 'id="tabPlayer"')
         self.assertContains(response, 'id="tabOwner"')

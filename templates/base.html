@@ -11,12 +11,12 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/css/style.css?v=4">
+    <link rel="stylesheet" href="/static/css/style.css?v=22">
     {% block extra_head %}{% endblock %}
 </head>
-<body class="app-body {% if request.resolver_match.url_name in 'login,register,owner_login' %}auth-page{% endif %}">
+<body class="app-body {% if request.resolver_match.url_name in 'login,register,owner_login,institution_login,institution_register' %}auth-page{% endif %}">
     <!-- Top Global Header / Navigation -->
-    {% if request.resolver_match.url_name not in 'login,register,owner_login' %}
+    {% if request.resolver_match.url_name not in 'login,register,owner_login,institution_login,institution_register' %}
     <header class="app-header">
         <div class="header-container">
             <div class="brand-area">
@@ -24,13 +24,17 @@
                     <div class="logo-icon"><img src="/static/img/groundx-logo.png" alt=""></div>
                     <span class="brand-name">Ground<span class="highlight">X</span></span>
                 </a>
-                <span class="badge-role">{% if user.is_authenticated %}{{ user.get_role_display }}{% else %}Player & Owner Portal{% endif %}</span>
+                {% if user.is_authenticated %}<span class="badge-role">{{ user.get_role_display }}</span>{% endif %}
             </div>
 
             <!-- Desktop Nav Links -->
             <nav class="desktop-nav">
                 {% if user.is_authenticated and user.is_owner %}
                     <a href="{% url 'owner_home' %}" class="nav-link {% if request.resolver_match.url_name == 'owner_home' %}active{% endif %}">
+                        <i class="fa-solid fa-house"></i> Home
+                    </a>
+                {% elif user.is_authenticated and user.is_institution_coordinator %}
+                    <a href="{% url 'institution_portal' %}" class="nav-link {% if request.resolver_match.url_name == 'institution_portal' %}active{% endif %}">
                         <i class="fa-solid fa-house"></i> Home
                     </a>
                 {% else %}
@@ -43,6 +47,12 @@
                     <a href="{% url 'search' %}" class="nav-link {% if request.resolver_match.url_name == 'search' %}active{% endif %}">
                         <i class="fa-solid fa-magnifying-glass"></i> Explore Grounds
                     </a>
+                {% endif %}
+
+                {% if user.is_authenticated and user.is_institution_coordinator %}
+                    <a href="{% url 'institution_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'institution_dashboard' %}active{% endif %}"><i class="fa-solid fa-school"></i> Institution Dashboard</a>
+                {% elif not user.is_authenticated %}
+                    <a href="{% url 'institution_portal' %}" class="nav-link {% if request.resolver_match.url_name == 'institution_portal' %}active{% endif %}"><i class="fa-solid fa-school"></i> Institutions</a>
                 {% endif %}
                 
                 {% if user.is_authenticated %}
@@ -66,7 +76,10 @@
                     
                     <div class="user-menu">
                         <span class="user-greeting"><i class="fa-regular fa-user-circle"></i> {{ user.username }}</span>
-                        <a href="{% url 'logout' %}" class="btn-logout-small" title="Sign Out"><i class="fa-solid fa-right-from-bracket"></i></a>
+                        <form method="post" action="{% url 'logout' %}" class="logout-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-logout-small" title="Sign Out" aria-label="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
+                        </form>
                     </div>
                 {% else %}
                     <div class="auth-buttons">
@@ -98,10 +111,10 @@
     </main>
 
     <!-- Bottom Navigation Bar (Mobile / Responsive App Style matching Mockups) -->
-    {% if request.resolver_match.url_name not in 'login,register,owner_login' %}
+    {% if request.resolver_match.url_name not in 'login,register,owner_login,institution_login,institution_register' %}
     <nav class="mobile-bottom-nav">
         {% if user.is_superuser %}<a href="{% url 'admin_dashboard' %}" class="bnav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"><div class="bnav-icon"><i class="fa-solid fa-shield-halved"></i></div><span class="bnav-label">Admin</span></a>{% else %}
-        <a href="{% url 'home' %}" class="bnav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+        <a href="{% if user.is_authenticated and user.is_institution_coordinator %}{% url 'institution_portal' %}{% else %}{% url 'home' %}{% endif %}" class="bnav-item {% if request.resolver_match.url_name in 'home,institution_portal' %}active{% endif %}">
             <div class="bnav-icon"><i class="fa-solid fa-house"></i></div>
             <span class="bnav-label">Home</span>
         </a>
@@ -109,9 +122,15 @@
             <div class="bnav-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
             <span class="bnav-label">Search</span>
         </a>
-        <a href="{% if user.is_authenticated %}{% if user.is_owner %}{% url 'owner_dashboard' %}{% else %}{% url 'my_bookings' %}{% endif %}{% else %}{% url 'login' %}{% endif %}" class="bnav-item {% if request.resolver_match.url_name in 'my_bookings,owner_dashboard' %}active{% endif %}">
+        {% if not user.is_authenticated %}
+        <a href="{% url 'institution_portal' %}" class="bnav-item {% if request.resolver_match.url_name == 'institution_portal' %}active{% endif %}">
+            <div class="bnav-icon"><i class="fa-solid fa-school"></i></div>
+            <span class="bnav-label">Institutions</span>
+        </a>
+        {% endif %}
+        <a href="{% if user.is_authenticated %}{% if user.is_owner %}{% url 'owner_dashboard' %}{% elif user.is_institution_coordinator %}{% url 'institution_dashboard' %}{% else %}{% url 'my_bookings' %}{% endif %}{% else %}{% url 'login' %}{% endif %}" class="bnav-item {% if request.resolver_match.url_name in 'my_bookings,owner_dashboard,institution_dashboard' %}active{% endif %}">
             <div class="bnav-icon"><i class="fa-solid fa-calendar-check"></i></div>
-            <span class="bnav-label">{% if user.is_authenticated and user.is_owner %}Monitor{% else %}Bookings{% endif %}</span>
+            <span class="bnav-label">{% if user.is_authenticated and user.is_owner %}Monitor{% elif user.is_institution_coordinator %}Requests{% else %}Bookings{% endif %}</span>
         </a>
         <a href="{% if user.is_authenticated %}{% if user.is_owner %}{% url 'owner_analytics' %}{% else %}{% url 'profile' %}{% endif %}{% else %}{% url 'login' %}{% endif %}" class="bnav-item {% if request.resolver_match.url_name in 'profile,owner_analytics,login,register' %}active{% endif %}">
             <div class="bnav-icon"><i class="fa-solid {% if user.is_authenticated and user.is_owner %}fa-chart-pie{% else %}fa-user{% endif %}"></i></div>
@@ -122,7 +141,7 @@
     {% endif %}
 
     <!-- Scripts -->
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js?v=7"></script>
     <script src="/static/js/location.js"></script>
     {% block extra_scripts %}{% endblock %}
 </body>

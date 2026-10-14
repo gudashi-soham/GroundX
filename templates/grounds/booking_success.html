@@ -37,9 +37,23 @@
                 <span class="t-label">Sport:</span>
                 <span class="t-val">{{ booking.sport.name }}</span>
             </div>
+            {% for item in booking.equipment_items.all %}
+            <div class="ticket-row">
+                <span class="t-label">{{ item.equipment_name }} &times; {{ item.quantity }}</span>
+                <span class="t-val">&#8377;{{ item.line_total|floatformat:2 }}</span>
+            </div>
+            {% endfor %}
+            <div class="ticket-row">
+                <span class="t-label">Ground booking:</span>
+                <span class="t-val">&#8377;{{ booking.ground_price|floatformat:2 }}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="t-label">Equipment total:</span>
+                <span class="t-val">&#8377;{{ booking.equipment_total|floatformat:2 }}</span>
+            </div>
             <div class="ticket-row total-row">
-                <span class="t-label">Total Amount Paid:</span>
-                <span class="t-val">₹{{ booking.total_price|floatformat:0 }}</span>
+                <span class="t-label">Booking total:</span>
+                <span class="t-val">&#8377;{{ booking.total_price|floatformat:2 }}</span>
             </div>
         </div>
 

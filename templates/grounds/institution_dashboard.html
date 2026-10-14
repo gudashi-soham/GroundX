@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Institution Dashboard - GroundX{% endblock %}
+
+{% block content %}
+<div class="screen-wrapper institution-dashboard">
+    <section class="institution-dashboard-heading">
+        <div class="institution-welcome-copy">
+            <span class="institution-kicker">COORDINATOR PORTAL</span>
+            <h1>Welcome, {{ institution.coordinator.first_name|default:institution.coordinator.username }}</h1>
+            <p><strong>{{ institution.name }}</strong><span>·</span>{{ institution.get_institution_type_display }}<span>·</span>{{ institution.city }}</p>
+        </div>
+        <a class="btn-institution-secondary" href="{% url 'institution_portal' %}"><i class="fa-solid fa-circle-info"></i> How it works</a>
+    </section>
+
+    <div class="institution-dashboard-grid">
+        <section class="institution-request-panel">
+            <div class="institution-panel-heading">
+                <span><i class="fa-solid fa-calendar-plus"></i></span>
+                <div><h2>Request a ground</h2><p>Tell the owner when you need the ground. They’ll reply with availability and costs.</p></div>
+            </div>
+
+            {% if not available_ground_count %}
+                <div class="institution-empty-hint"><i class="fa-solid fa-circle-info"></i><span>Ground listings are being prepared for your area. Please check back soon.</span></div>
+            {% else %}
+                <form method="post" class="institution-request-form">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        {% if field.name == 'ground' %}
+                            <div class="institution-form-section-heading institution-field-full"><span>1</span><div><h3>Choose a ground</h3><p>Select the venue and sport for your group.</p></div></div>
+                        {% elif field.name == 'frequency' %}
+                            <div class="institution-form-section-heading institution-field-full"><span>2</span><div><h3>Plan your schedule</h3><p>Choose a one-time event or a regular day and time.</p></div></div>
+                        {% elif field.name == 'group_size' %}
+                            <div class="institution-form-section-heading institution-field-full"><span>3</span><div><h3>Participants and equipment</h3><p>Share what your group needs so the owner can prepare.</p></div></div>
+                        {% endif %}
+                        <div class="form-field-group {% if field.name == 'frequency' %}institution-frequency-field{% endif %} {% if field.name == 'notes' %}institution-field-full{% endif %}">
+                            <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<small class="institution-field-help">{{ field.help_text }}</small>{% endif %}
+                            {% if field.errors %}<div class="institution-field-errors">{{ field.errors }}</div>{% endif %}
+                        </div>
+                    {% endfor %}
+                    {% if form.non_field_errors %}<div class="auth-errors institution-field-full">{{ form.non_field_errors }}</div>{% endif %}
+                    <div class="institution-fee-note institution-field-full"><i class="fa-solid fa-circle-info"></i><span>This is a request, not a confirmed booking. The owner will confirm availability and ground/equipment costs. GroundX’s ₹100 fee is charged to the owner for each confirmed session.</span></div>
+                    <button class="btn-primary-block institution-field-full" type="submit">Send request to owner <i class="fa-solid fa-arrow-right"></i></button>
+                </form>
+            {% endif %}
+        </section>
+
+        <aside class="institution-side-note">
+            <span><i class="fa-solid fa-handshake"></i></span>
+            <h3>One contact for your institution</h3>
+            <p>Your coordinator account keeps your institution details and all your ground requests together.</p>
+            <div><i class="fa-solid fa-shield-halved"></i><span>Ground rental and equipment costs are confirmed with the owner before a session is booked.</span></div>
+        </aside>
+    </div>
+
+    <section class="institution-requests-section">
+        <div class="institution-list-heading">
+            <div><span class="institution-kicker">YOUR ACTIVITY</span><h2>Ground requests</h2><p>Follow owner replies and check confirmed sessions here.</p></div>
+            <span class="institution-count">{{ booking_requests|length }} request{{ booking_requests|length|pluralize }}</span>
+        </div>
+        <div class="institution-request-list">
+            {% for item in booking_requests %}
+                <article class="institution-request-card">
+                    <div class="institution-request-card-icon"><i class="fa-solid fa-futbol"></i></div>
+                    <div class="institution-request-card-main">
+                        <div class="institution-request-card-title"><h3>{{ item.ground.name }}</h3><span class="institution-status institution-status-{{ item.status|lower }}">{{ item.get_status_display }}</span></div>
+                        <p>{{ item.get_frequency_display }} · {{ item.start_date|date:'M j, Y' }}{% if item.end_date != item.start_date %} – {{ item.end_date|date:'M j, Y' }}{% endif %} · {{ item.preferred_start_time|time:'g:i A' }}–{{ item.preferred_end_time|time:'g:i A' }}</p>
+                        <small>{{ item.sport.name|default:'Sport to be discussed' }} · {{ item.group_size }} participants{% if item.equipment_request %} · Equipment: {{ item.equipment_request }}{% endif %}</small>
+                        {% if item.owner_response %}<div class="institution-owner-response"><strong>Owner response</strong><p>{{ item.owner_response }}</p></div>{% endif %}
+                        {% if item.session_bookings.all %}
+                            <div class="institution-confirmed-sessions"><strong>Confirmed sessions</strong>{% for session in item.session_bookings.all %}<div><span>{{ session.booking_date|date:'D, M j, Y' }} · {{ session.slot.slot_label }}</span><b>₹{{ session.total_price|floatformat:2 }}</b></div>{% endfor %}<small>GroundX’s ₹100 per-session platform fee is billed to the ground owner.</small></div>
+                        {% endif %}
+                    </div>
+                </article>
+            {% empty %}
+                <div class="institution-empty-list"><span><i class="fa-regular fa-calendar"></i></span><h3>No requests yet</h3><p>Your requests and the owner’s replies will show here. Start by choosing a ground above.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

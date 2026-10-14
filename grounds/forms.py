@@ -1,9 +1,200 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 from django.utils.text import slugify
 from datetime import time
-from .models import Ground, Sport
+from .models import Ground, GroundEquipment, GroundReview, InstitutionBookingRequest, Sport
+
+
+class GroundReviewForm(forms.ModelForm):
+    class Meta:
+        model = GroundReview
+        fields = ['rating', 'comment']
+        widgets = {
+            'rating': forms.Select(attrs={'class': 'form-input'}),
+            'comment': forms.Textarea(attrs={
+                'class': 'form-input',
+                'rows': 4,
+                'maxlength': 1000,
+                'placeholder': 'How was your experience? Share the good and the bad...',
+            }),
+        }
+        labels = {'rating': 'Your rating', 'comment': 'Your review'}
+
+
+class InstitutionBookingRequestForm(forms.ModelForm):
+    class Meta:
+        model = InstitutionBookingRequest
+        fields = [
+            'ground', 'sport', 'frequency', 'start_date', 'end_date',
+            'preferred_start_time', 'preferred_end_time', 'group_size',
+            'equipment_request', 'notes',
+        ]
+        widgets = {
+            'ground': forms.Select(attrs={'class': 'form-input'}),
+            'sport': forms.Select(attrs={'class': 'form-input'}),
+            'frequency': forms.Select(attrs={'class': 'form-input'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'preferred_start_time': forms.TimeInput(attrs={'class': 'form-input', 'type': 'time'}),
+            'preferred_end_time': forms.TimeInput(attrs={'class': 'form-input', 'type': 'time'}),
+            'group_size': forms.NumberInput(attrs={'class': 'form-input', 'min': '1', 'placeholder': 'e.g. 30'}),
+            'equipment_request': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. 2 cricket kits, 10 footballs'}),
+            'notes': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Anything the ground owner should know?'}),
+        }
+        labels = {
+            'ground': 'Choose a ground',
+            'sport': 'Sport',
+            'frequency': 'How often?',
+            'start_date': 'First date',
+            'end_date': 'Last date',
+            'preferred_start_time': 'Preferred start time',
+            'preferred_end_time': 'Preferred end time',
+            'group_size': 'Expected students / participants',
+            'equipment_request': 'Equipment needed (optional)',
+            'notes': 'Message for the owner (optional)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['ground'].queryset = Ground.objects.filter(
+            is_active=True, owner__is_active=True, owner__is_owner_approved=True,
+            owner__owner_terms_accepted_at__isnull=False,
+        ).order_by('city', 'name')
+        self.fields['sport'].queryset = Sport.objects.order_by('name')
+        self.fields['sport'].required = False
+        self.fields['group_size'].min_value = 1
+        self.fields['start_date'].help_text = 'For weekly requests, this date sets the weekday.'
+
+    def clean(self):
+        cleaned = super().clean()
+        start_date = cleaned.get('start_date')
+        end_date = cleaned.get('end_date')
+        start_time = cleaned.get('preferred_start_time')
+        end_time = cleaned.get('preferred_end_time')
+        frequency = cleaned.get('frequency')
+        ground = cleaned.get('ground')
+        sport = cleaned.get('sport')
+        if start_date and start_date < timezone.localdate():
+            self.add_error('start_date', 'Choose today or a future date.')
+        if start_date and end_date and end_date < start_date:
+            self.add_error('end_date', 'The last date must be on or after the first date.')
+        if start_date and end_date and frequency == 'ONCE' and start_date != end_date:
+            self.add_error('end_date', 'For a one time event, use the same first and last date.')
+        if start_date and end_date and end_date >= start_date:
+            if frequency == 'DAILY':
+                session_count = (end_date - start_date).days + 1
+            elif frequency == 'WEEKLY':
+                session_count = ((end_date - start_date).days // 7) + 1
+            else:
+                session_count = 1
+            if session_count > 60:
+                self.add_error('end_date', 'A request can include up to 60 sessions.')
+        if start_time and end_time and end_time <= start_time:
+            self.add_error('preferred_end_time', 'End time must be later than the start time.')
+        if start_date == timezone.localdate() and start_time:
+            current_time = timezone.localtime().time().replace(tzinfo=None)
+            if start_time <= current_time:
+                self.add_error('preferred_start_time', 'Choose a start time that has not passed today.')
+        if ground and sport and not ground.sports.filter(pk=sport.pk).exists():
+            self.add_error('sport', 'Choose a sport offered at the selected ground.')
+        return cleaned
+
+
+class InstitutionOwnerResponseForm(forms.Form):
+    owner_response = forms.CharField(
+        max_length=1000, required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-input', 'rows': 2,
+            'placeholder': 'Optional note for the coordinator',
+        }),
+    )
+    equipment_price_per_session = forms.DecimalField(
+        max_digits=8, decimal_places=2, min_value=0, required=False, initial=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-input', 'min': '0', 'step': '0.01',
+            'placeholder': '0.00',
+        }),
+        label='Equipment charge per session (₹)',
+    )
+
+
+class BookingCancellationForm(forms.Form):
+    reason = forms.CharField(
+        max_length=500,
+        strip=True,
+        widget=forms.Textarea(attrs={
+            'class': 'form-input cancel-reason-input',
+            'rows': 2,
+            'maxlength': 500,
+            'placeholder': 'Tell the ground owner why you are cancelling...',
+            'required': 'required',
+        }),
+        label='Reason for cancellation',
+    )
+
+
+class GroundEquipmentForm(forms.ModelForm):
+    class Meta:
+        model = GroundEquipment
+        fields = ['name', 'category', 'price', 'quantity', 'is_available']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'e.g. Cricket bat',
+            }),
+            'category': forms.Select(attrs={'class': 'form-input equipment-category'}),
+            'price': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'min': '0.01',
+                'step': '0.01',
+                'placeholder': '0.00',
+            }),
+            'quantity': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'min': '1',
+                'step': '1',
+            }),
+            'is_available': forms.CheckboxInput(attrs={'class': 'equipment-available-toggle'}),
+        }
+        labels = {
+            'name': 'Equipment name',
+            'category': 'Sport or type',
+            'price': 'Rental price per item and slot',
+            'quantity': 'Stock for each slot',
+            'is_available': 'Offer for rent',
+        }
+
+
+class BaseGroundEquipmentFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+
+        item_keys = []
+        for form in self.forms:
+            if not form.cleaned_data or form.cleaned_data.get('DELETE'):
+                continue
+            name = form.cleaned_data.get('name', '').strip().casefold()
+            category = form.cleaned_data.get('category', '')
+            item_key = (category, name)
+            if name and item_key in item_keys:
+                raise ValidationError('Equipment names must be unique within each category.')
+            if name:
+                item_keys.append(item_key)
+
+
+GroundEquipmentFormSet = inlineformset_factory(
+    Ground,
+    GroundEquipment,
+    form=GroundEquipmentForm,
+    formset=BaseGroundEquipmentFormSet,
+    extra=1,
+    can_delete=True,
+)
+
 
 class GroundForm(forms.ModelForm):
     sports = forms.CharField(

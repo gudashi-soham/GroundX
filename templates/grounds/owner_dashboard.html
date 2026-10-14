@@ -31,6 +31,9 @@
                 </div>
                 <div class="gm-stats">
                     <span class="occ-badge">{{ item.occupied_count }} / {{ item.total_slots }} Slots Booked ({{ item.occupancy_pct }}% Occupied)</span>
+                    <a href="{% url 'owner_ground_reviews' item.ground.id %}" class="btn-ground-reviews">
+                        <i class="fa-solid fa-star"></i> Reviews <span>{{ item.ground.reviews.count }}</span>
+                    </a>
                     <a href="{% url 'edit_ground' item.ground.id %}" class="btn-edit-ground"><i class="fa-solid fa-pen-to-square"></i> Edit Ground</a>
                 </div>
             </div>
@@ -58,6 +61,18 @@
         {% endfor %}
     </div>
 
+    <section class="card-section institution-owner-requests">
+        <div class="section-title-between"><div><h3><i class="fa-solid fa-school"></i> Institution requests</h3><p class="sub-lead">Review sports day and recurring practice requests from schools and colleges.</p></div><span class="institution-count">{{ institution_requests|length }} pending</span></div>
+        <div class="institution-owner-request-list">
+            {% for item in institution_requests %}
+            <article class="institution-owner-request">
+                <div class="institution-owner-request-main"><div class="institution-request-card-title"><h4>{{ item.institution.name }}</h4><span class="institution-status institution-status-pending">New request</span></div><p>{{ item.ground.name }} · {{ item.get_frequency_display }} · {{ item.start_date|date:'M j, Y' }}{% if item.end_date != item.start_date %} – {{ item.end_date|date:'M j, Y' }}{% endif %}</p><p>{{ item.preferred_start_time|time:'g:i A' }}–{{ item.preferred_end_time|time:'g:i A' }} · {{ item.sport.name|default:'Sport not specified' }} · {{ item.group_size }} participants</p>{% if item.equipment_request %}<p><strong>Equipment:</strong> {{ item.equipment_request }}</p>{% endif %}<small>Coordinator: {{ item.institution.coordinator.get_full_name|default:item.institution.coordinator.username }} · {{ item.institution.coordinator.phone_number|default:item.institution.coordinator.email }}</small></div>
+                <form method="post" action="{% url 'institution_request_update' item.id %}" class="institution-owner-response-form">{% csrf_token %}<textarea name="owner_response" class="form-input" rows="2" maxlength="1000" placeholder="Optional note for the coordinator"></textarea><label class="institution-equipment-quote">Equipment charge per session (₹)<input type="number" name="equipment_price_per_session" min="0" step="0.01" value="0.00"></label><small>Confirming books every requested date and adds ₹100 GroundX fee per session to your owner balance.</small><div><button name="action" value="decline" class="btn-institution-decline" type="submit">Decline</button><button name="action" value="accept" class="btn-institution-accept" type="submit">Confirm &amp; book</button></div></form>
+            </article>
+            {% empty %}<div class="institution-empty-hint">No institution requests waiting for a response.</div>{% endfor %}
+        </div>
+    </section>
+
     <!-- Today's Confirmed Bookings Table -->
     <div class="card-section" style="margin-top: 24px;">
         <h3><i class="fa-solid fa-list-check"></i> Today's Schedule ({{ todays_bookings|length }} Bookings)</h3>
@@ -68,8 +83,9 @@
                     <tr>
                         <th>Booking ID</th>
                         <th>Ground</th>
-                        <th>Player Name</th>
+                        <th>Player / Institution</th>
                         <th>Time Slot</th>
+                        <th>Equipment</th>
                         <th>Sport</th>
                         <th>Price</th>
                         <th>Status</th>
@@ -80,20 +96,70 @@
                     <tr>
                         <td><strong>#{{ b.booking_id }}</strong></td>
                         <td>{{ b.ground.name }}</td>
-                        <td>{{ b.player.username }} ({{ b.player.phone_number|default:"N/A" }})</td>
+                        <td>{% if b.institution_request %}<strong>{{ b.institution_request.institution.name }}</strong><small>Coordinator: {{ b.player.get_full_name|default:b.player.username }} · {{ b.player.phone_number|default:b.player.email }}</small>{% else %}{{ b.player.username }} ({{ b.player.phone_number|default:"N/A" }}){% endif %}</td>
                         <td><span class="slot-tag">{{ b.slot.slot_label }}</span></td>
+                        <td>
+                            {% if b.institution_request and b.institution_request.equipment_request %}
+                                <span class="owner-booking-equipment">{{ b.institution_request.equipment_request }}</span><br><small>₹{{ b.equipment_total|floatformat:2 }}</small>
+                            {% else %}{% for item in b.equipment_items.all %}
+                                <span class="owner-booking-equipment">{{ item.equipment_name }} × {{ item.quantity }}</span>{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                <span class="owner-no-equipment">None</span>
+                            {% endfor %}{% endif %}
+                        </td>
                         <td>{{ b.sport.name }}</td>
-                        <td>₹{{ b.total_price|floatformat:0 }}</td>
+                        <td>Ground ₹{{ b.ground_price|floatformat:2 }}<br>Equipment ₹{{ b.equipment_total|floatformat:2 }}<br><strong>Total ₹{{ b.total_price|floatformat:2 }}</strong></td>
                         <td><span class="badge-status badge-confirmed">Confirmed</span></td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center" style="padding: 24px; color: #64748B;">No slots booked for today yet.</td>
+                        <td colspan="8" class="text-center" style="padding: 24px; color: #64748B;">No slots booked for today yet.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    <section class="card-section owner-cancellations-section">
+        <div class="section-title-between">
+            <div>
+                <h3><i class="fa-solid fa-ban"></i> Recent Cancellations</h3>
+                <p class="sub-lead">Player cancellation reasons for your grounds.</p>
+            </div>
+        </div>
+        <div class="owner-cancellations-list">
+            {% for b in cancelled_bookings %}
+            <article class="owner-cancellation-card">
+                <div class="owner-cancellation-heading">
+                    <div class="owner-cancellation-reference">
+                        <span>Booking reference</span>
+                        <strong>#{{ b.booking_id }}</strong>
+                    </div>
+                    <span class="badge-status badge-cancelled">Cancelled</span>
+                </div>
+                <h4 class="owner-cancellation-ground">{{ b.ground.name }}</h4>
+                <div class="owner-cancellation-meta">
+                    <span><i class="fa-regular fa-user"></i> {{ b.player.username }}</span>
+                    <span><i class="fa-regular fa-calendar"></i> {{ b.booking_date|date:"M d, Y" }}</span>
+                    <span><i class="fa-regular fa-clock"></i> {{ b.slot.slot_label }}</span>
+                </div>
+                <div class="owner-cancellation-reason">
+                    <span class="owner-cancellation-reason-icon"><i class="fa-regular fa-comment-dots"></i></span>
+                    <div>
+                        <span class="owner-cancellation-reason-label">Player's reason</span>
+                        <p>{{ b.cancellation_reason|default:"No reason was recorded for this cancellation." }}</p>
+                    </div>
+                </div>
+                <footer class="owner-cancellation-timestamp">
+                    <i class="fa-regular fa-clock"></i>
+                    Cancelled {% if b.cancelled_at %}{{ b.cancelled_at|date:"M d, Y, g:i A" }}{% else %}at an earlier date{% endif %}
+                </footer>
+            </article>
+            {% empty %}
+            <p class="owner-cancellations-empty">There are no cancelled bookings for your grounds.</p>
+            {% endfor %}
+        </div>
+    </section>
 </div>
 {% endblock %}

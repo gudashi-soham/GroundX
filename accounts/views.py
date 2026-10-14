@@ -3,10 +3,25 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from .forms import UserRegistrationForm, UserLoginForm
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
+from .forms import InstitutionRegistrationForm, UserRegistrationForm, UserLoginForm
+
+
+def _safe_next_url(request):
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return None
 
 def register_view(request):
     if request.user.is_authenticated:
+        if request.user.is_institution_coordinator():
+            return redirect('institution_dashboard')
         return redirect('owner_home' if request.user.is_owner() and request.user.is_owner_approved else 'home')
         
     if request.method == 'POST':
@@ -24,6 +39,8 @@ def register_view(request):
                     messages.info(request, 'Your owner account is awaiting administrator approval.')
                     return redirect('home')
                 return redirect('owner_home')
+            if user.is_institution_coordinator():
+                return redirect('institution_dashboard')
             return redirect('home')
         else:
             messages.error(request, 'Please correct the errors below.')
@@ -43,43 +60,79 @@ def login_view(request):
         return redirect('home')
         
     role_param = request.GET.get('role', 'PLAYER').upper()
-    current_role = role_param if role_param in ['PLAYER', 'OWNER'] else 'PLAYER'
+    current_role = role_param if role_param in ['PLAYER', 'OWNER', 'INSTITUTION'] else 'PLAYER'
 
     if request.method == 'POST':
         form = UserLoginForm(request, data=request.POST)
         submitted_role = request.POST.get('role', current_role).upper()
+        if submitted_role not in {'PLAYER', 'OWNER', 'INSTITUTION'}:
+            submitted_role = current_role
+        current_role = submitted_role
         if form.is_valid():
             user = form.get_user()
-            login(request, user)
             if user.is_superuser:
-                return redirect('admin_dashboard')
-            next_url = request.GET.get('next') or request.POST.get('next')
-            if next_url:
-                return redirect(next_url)
-                
-            if user.is_owner():
-                if not user.is_owner_approved and not user.is_superuser:
-                    messages.info(request, 'Your owner account is awaiting administrator approval.')
-                    return redirect('home')
-                messages.success(request, f'Welcome to Ground Owner Hub, {user.username}!')
-                return redirect('owner_home')
+                messages.error(request, 'Administrator accounts must use the administrator sign-in page.')
+            elif user.role != submitted_role:
+                selected_role_name = {
+                    'PLAYER': 'Player',
+                    'OWNER': 'Turf Owner',
+                    'INSTITUTION': 'Coordinator',
+                }[submitted_role]
+                messages.error(
+                    request,
+                    f'This account is registered as {user.get_role_display()}, but you selected {selected_role_name}. '
+                    f'Select the {user.get_role_display()} sign-in option to continue.',
+                )
             else:
-                if submitted_role == 'OWNER':
-                    messages.info(request, f'Welcome back, {user.username}! You signed in with a Player account. To manage grounds, register an Owner account.')
-                else:
+                login(request, user)
+                next_url = _safe_next_url(request)
+                if next_url:
+                    return redirect(next_url)
+
+                if user.is_owner():
+                    if not user.is_owner_approved:
+                        messages.info(request, 'Your owner account is awaiting administrator approval.')
+                        return redirect('home')
+                    messages.success(request, f'Welcome to Ground Owner Hub, {user.username}!')
+                    return redirect('owner_home')
+                if user.is_institution_coordinator():
                     messages.success(request, f'Welcome back, {user.username}!')
+                    return redirect('institution_dashboard')
+                messages.success(request, f'Welcome back, {user.username}!')
                 return redirect('home')
         else:
             messages.error(request, 'Invalid username or password.')
-            current_role = submitted_role
     else:
         form = UserLoginForm()
         
     return render(request, 'accounts/login.html', {
         'form': form,
         'role': current_role,
-        'is_owner_login': (current_role == 'OWNER')
+        'is_owner_login': (current_role == 'OWNER'),
+        'is_institution_login': (current_role == 'INSTITUTION'),
     })
+
+
+def institution_register_view(request):
+    if request.user.is_authenticated:
+        return redirect('institution_dashboard' if request.user.is_institution_coordinator() else 'home')
+    if request.method == 'POST':
+        form = InstitutionRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, f'Welcome to GroundX, {user.institution_profile.name}!')
+            return redirect('institution_dashboard')
+        messages.error(request, 'Please correct the errors below.')
+    else:
+        form = InstitutionRegistrationForm()
+    return render(request, 'accounts/institution_register.html', {'form': form})
+
+
+def institution_login_view(request):
+    if request.user.is_authenticated:
+        return redirect('institution_dashboard' if request.user.is_institution_coordinator() else 'home')
+    return redirect('/accounts/login/?role=institution')
 
 def admin_login_view(request):
     if request.user.is_authenticated:
@@ -113,20 +166,22 @@ def owner_login_view(request):
         form = UserLoginForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            login(request, user)
-            next_url = request.GET.get('next') or request.POST.get('next')
-            if next_url:
-                return redirect(next_url)
-                
-            if user.is_owner():
-                if not user.is_owner_approved and not user.is_superuser:
+            if not user.is_owner():
+                messages.error(
+                    request,
+                    f'This account is registered as {user.get_role_display()}, not Turf Owner. '
+                    'Choose the matching sign-in option to continue.',
+                )
+            else:
+                login(request, user)
+                next_url = _safe_next_url(request)
+                if next_url:
+                    return redirect(next_url)
+                if not user.is_owner_approved:
                     messages.info(request, 'Your owner account is awaiting administrator approval.')
                     return redirect('home')
                 messages.success(request, f'Welcome to Ground Owner Hub, {user.username}!')
                 return redirect('owner_home')
-            else:
-                messages.warning(request, f'Welcome {user.username}! You are registered as a Player. Directing you to the player portal.')
-                return redirect('home')
         else:
             messages.error(request, 'Invalid username or password.')
     else:
@@ -154,6 +209,7 @@ def accept_owner_terms_view(request):
         return redirect('owner_home')
     return render(request, 'accounts/owner_terms.html')
 
+@require_POST
 def logout_view(request):
     logout(request)
     messages.info(request, 'You have been logged out.')

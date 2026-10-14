@@ -34,6 +34,11 @@ def generate_admin_analytics():
         owner__owner_terms_accepted_at__isnull=False,
     )
     bookings = Booking.objects.filter(status__in=['CONFIRMED', 'COMPLETED'])
+    recent_institution_sessions = list(
+        bookings.filter(institution_request__isnull=False)
+        .select_related('ground', 'slot', 'institution_request__institution')
+        .order_by('-booking_date', '-slot__start_time')[:12]
+    )
     owner_fee_balances = list(User.objects.filter(
         role='OWNER',
         grounds__bookings__platform_fee_status='DUE',
@@ -89,6 +94,7 @@ def generate_admin_analytics():
         'pending_owner_count': pending_owners.count(),
         'active_ground_count': active_grounds.count(),
         'booking_count': bookings.count(),
+        'recent_institution_sessions': recent_institution_sessions,
         'monthly_revenue': sum(monthly_values),
         'platform_fees_due': bookings.filter(platform_fee_status='DUE').aggregate(total=Sum('platform_fee_amount'))['total'] or 0,
         'owner_fee_balances': owner_fee_balances,

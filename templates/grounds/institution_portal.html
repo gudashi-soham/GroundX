@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Ground Bookings for Institutions - GroundX{% endblock %}
+
+{% block content %}
+<div class="institution-page screen-wrapper">
+    <section class="institution-hero">
+        <div class="institution-hero-copy">
+            <span class="institution-kicker"><i class="fa-solid fa-school"></i> GROUNDX FOR INSTITUTIONS</span>
+            <h1>Make room for a <span>better game.</span></h1>
+            <p>Find a nearby sports ground for your school or college event, or request a regular practice slot. Ask the owner about equipment in the same request.</p>
+            <div class="institution-hero-actions">
+                <a href="{% url 'institution_register' %}" class="btn-institution-primary">Create coordinator account <i class="fa-solid fa-arrow-right"></i></a>
+                <a href="{% url 'login' %}?role=institution" class="btn-institution-secondary">Coordinator sign in</a>
+            </div>
+            <div class="institution-trust-note"><i class="fa-solid fa-circle-check"></i> Requests go directly to the ground owner. You can review the details before confirming.</div>
+        </div>
+        <div class="institution-hero-visual" aria-hidden="true">
+            <div class="institution-visual-sun"></div>
+            <div class="institution-visual-pitch"><span></span><i></i></div>
+            <div class="institution-visual-card"><span class="institution-visual-icon"><i class="fa-solid fa-calendar-check"></i></span><div><strong>Sports day, sorted.</strong><small>Ground · time · equipment</small></div><i class="fa-solid fa-arrow-up-right-from-square"></i></div>
+        </div>
+    </section>
+
+    <section class="institution-benefits">
+        <div class="institution-section-heading"><span>BUILT FOR YOUR SCHEDULE</span><h2>From one big event to every Saturday.</h2><p>Tell owners what your team needs. They can review availability and respond to your request.</p></div>
+        <div class="institution-benefit-grid">
+            <article><span><i class="fa-solid fa-trophy"></i></span><h3>Sports days &amp; tournaments</h3><p>Request a ground for an annual competition, school sports day, or inter-college event.</p></article>
+            <article><span><i class="fa-solid fa-repeat"></i></span><h3>Regular practice</h3><p>Ask for a daily or weekly schedule across the dates your team needs.</p></article>
+            <article><span><i class="fa-solid fa-box-open"></i></span><h3>Equipment requests</h3><p>Include the equipment you need and the owner can confirm what they have available.</p></article>
+        </div>
+    </section>
+
+    <section class="institution-how"><div><span class="institution-kicker">SIMPLE TO GET STARTED</span><h2>Three steps to your next session.</h2></div><ol><li><b>01</b><div><strong>Create a coordinator account</strong><span>Use your institution details and contact information.</span></div></li><li><b>02</b><div><strong>Send a ground request</strong><span>Choose dates, preferred times, sport, group size, and equipment.</span></div></li><li><b>03</b><div><strong>Coordinate with the owner</strong><span>Review their response and finalize the arrangement directly.</span></div></li></ol></section>
+</div>
+{% endblock %}

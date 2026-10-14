@@ -1,0 +1,24 @@
+﻿<div class="equipment-form-row">
+    <span class="equipment-type-icon-wrap"><i class="fa-solid fa-box-open equipment-type-icon"></i></span>
+    <div class="equipment-fields">
+        {{ equipment_form.id }}
+        <div class="equipment-field">
+            <label class="field-label">Name</label>
+            {{ equipment_form.name }}
+        </div>
+        <div class="equipment-field">
+            <label class="field-label">Category</label>
+            {{ equipment_form.category }}
+        </div>
+        <div class="equipment-field">
+            <label class="field-label">Price per item / slot (₹)</label>
+            {{ equipment_form.price }}
+        </div>
+        <div class="equipment-field">
+            <label class="field-label">Stock per slot</label>
+            {{ equipment_form.quantity }}
+        </div>
+        <label class="equipment-available-label">{{ equipment_form.is_available }} Offer for rent</label>
+        <label class="equipment-delete-label">{{ equipment_form.DELETE }} Remove this item</label>
+    </div>
+</div>

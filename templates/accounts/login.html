@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if role == 'OWNER' %}Turf Owner Sign In - GroundX{% else %}Sign In - GroundX{% endif %}{% endblock %}
+{% block title %}{% if role == 'OWNER' %}Turf Owner Sign In - GroundX{% elif role == 'INSTITUTION' %}Coordinator Sign In - GroundX{% else %}Sign In - GroundX{% endif %}{% endblock %}
 
 {% block content %}
 <div class="auth-shell">
@@ -16,11 +16,11 @@
         <!-- Role Switcher Tabs -->
         <div class="auth-role-tabs-container">
             <button type="button" 
-                    class="auth-role-tab {% if role != 'OWNER' %}active{% endif %}" 
+                    class="auth-role-tab {% if role != 'OWNER' and role != 'INSTITUTION' %}active{% endif %}"
                     id="tabPlayer" 
                     onclick="selectLoginRole('PLAYER')">
                 <i class="fa-solid fa-user"></i>
-                <span>Player / User</span>
+                <span>Player</span>
             </button>
             <button type="button" 
                     class="auth-role-tab {% if role == 'OWNER' %}active{% endif %}" 
@@ -29,15 +29,20 @@
                 <i class="fa-solid fa-shield-halved"></i>
                 <span>Turf Owner</span>
             </button>
+            <button type="button" class="auth-role-tab {% if role == 'INSTITUTION' %}active{% endif %}" id="tabInstitution" onclick="selectLoginRole('INSTITUTION')">
+                <i class="fa-solid fa-school"></i><span>Coordinator</span>
+            </button>
         </div>
 
         <div class="auth-header">
             <h1 id="authTitle">
-                {% if role == 'OWNER' %}Sign In as Turf Owner{% else %}Sign In as Player{% endif %}
+                {% if role == 'OWNER' %}Sign In as Turf Owner{% elif role == 'INSTITUTION' %}Coordinator sign in{% else %}Sign In as Player{% endif %}
             </h1>
             <p id="authSubtitle">
                 {% if role == 'OWNER' %}
                 Connects directly to your Ground Owner Hub, live slot bookings, and revenue tracking.
+                {% elif role == 'INSTITUTION' %}
+                Manage your institution profile, send ground requests, and follow owner responses.
                 {% else %}
                 Manage your turf bookings, explore top grounds, and play your next game.
                 {% endif %}
@@ -75,6 +80,8 @@
             <button type="submit" class="btn-primary-block auth-btn" id="authSubmitBtn">
                 {% if role == 'OWNER' %}
                 Sign In to Owner Hub <i class="fa-solid fa-arrow-right"></i>
+                {% elif role == 'INSTITUTION' %}
+                Sign In to Coordinator Portal <i class="fa-solid fa-arrow-right"></i>
                 {% else %}
                 Sign In as Player <i class="fa-solid fa-arrow-right"></i>
                 {% endif %}
@@ -82,13 +89,17 @@
         </form>
 
         <div class="auth-footer" id="authFooter">
-            <div id="footerPlayer" style="{% if role == 'OWNER' %}display: none;{% endif %}">
+            <div id="footerPlayer" style="{% if role == 'OWNER' or role == 'INSTITUTION' %}display: none;{% endif %}">
                 <span>New player to GroundX?</span>
                 <a href="{% url 'register' %}?role=player" class="auth-link">Create a player account</a>
             </div>
             <div id="footerOwner" style="{% if role != 'OWNER' %}display: none;{% endif %}">
                 <span>Want to list your turf arena?</span>
                 <a href="{% url 'register' %}?role=owner" class="auth-link">Register as Turf Owner</a>
+            </div>
+            <div id="footerInstitution" style="{% if role != 'INSTITUTION' %}display: none;{% endif %}">
+                <span>New to institution bookings?</span>
+                <a href="{% url 'institution_register' %}" class="auth-link">Create coordinator account</a>
             </div>
         </div>
         <div class="admin-login-prompt">
@@ -101,14 +112,17 @@
 <script>
 function selectLoginRole(role) {
     const isOwner = (role === 'OWNER');
+    const isInstitution = (role === 'INSTITUTION');
     const roleInput = document.getElementById('loginRoleInput');
-    if (roleInput) roleInput.value = isOwner ? 'OWNER' : 'PLAYER';
+    if (roleInput) roleInput.value = role;
     
     const tabPlayer = document.getElementById('tabPlayer');
     const tabOwner = document.getElementById('tabOwner');
-    if (tabPlayer && tabOwner) {
-        tabPlayer.classList.toggle('active', !isOwner);
+    const tabInstitution = document.getElementById('tabInstitution');
+    if (tabPlayer && tabOwner && tabInstitution) {
+        tabPlayer.classList.toggle('active', !isOwner && !isInstitution);
         tabOwner.classList.toggle('active', isOwner);
+        tabInstitution.classList.toggle('active', isInstitution);
     }
     
     const title = document.getElementById('authTitle');
@@ -116,6 +130,7 @@ function selectLoginRole(role) {
     const submitBtn = document.getElementById('authSubmitBtn');
     const footerPlayer = document.getElementById('footerPlayer');
     const footerOwner = document.getElementById('footerOwner');
+    const footerInstitution = document.getElementById('footerInstitution');
     
     if (isOwner) {
         if (title) title.innerText = 'Sign In as Turf Owner';
@@ -123,19 +138,29 @@ function selectLoginRole(role) {
         if (submitBtn) submitBtn.innerHTML = 'Sign In to Owner Hub <i class="fa-solid fa-arrow-right"></i>';
         if (footerPlayer) footerPlayer.style.display = 'none';
         if (footerOwner) footerOwner.style.display = 'block';
+        if (footerInstitution) footerInstitution.style.display = 'none';
         document.title = 'Turf Owner Sign In - GroundX';
+    } else if (isInstitution) {
+        if (title) title.innerText = 'Coordinator sign in';
+        if (subtitle) subtitle.innerText = 'Manage your institution profile, send ground requests, and follow owner responses.';
+        if (submitBtn) submitBtn.innerHTML = 'Sign In to Coordinator Portal <i class="fa-solid fa-arrow-right"></i>';
+        if (footerPlayer) footerPlayer.style.display = 'none';
+        if (footerOwner) footerOwner.style.display = 'none';
+        if (footerInstitution) footerInstitution.style.display = 'block';
+        document.title = 'Coordinator Sign In - GroundX';
     } else {
         if (title) title.innerText = 'Sign In as Player';
         if (subtitle) subtitle.innerText = 'Manage your turf bookings, explore top grounds, and play your next game.';
         if (submitBtn) submitBtn.innerHTML = 'Sign In as Player <i class="fa-solid fa-arrow-right"></i>';
         if (footerPlayer) footerPlayer.style.display = 'block';
         if (footerOwner) footerOwner.style.display = 'none';
+        if (footerInstitution) footerInstitution.style.display = 'none';
         document.title = 'Sign In - GroundX';
     }
 
     if (window.history && window.history.replaceState) {
         const url = new URL(window.location);
-        url.searchParams.set('role', isOwner ? 'owner' : 'player');
+        url.searchParams.set('role', isOwner ? 'owner' : (isInstitution ? 'institution' : 'player'));
         window.history.replaceState({}, '', url);
     }
 }
