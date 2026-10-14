@@ -167,14 +167,6 @@ GroundX/
 `-- README.md
 ```
 
-## Media and Static Files
 
-Ground and profile uploads are stored under `media/` in local development. The directory is excluded from Git. In deployment, configure persistent media storage and serve uploaded files through an appropriate web server or object storage service. Static assets are in `static/`; for production, configure Django's static-file serving and run:
 
-```bash
-python manage.py collectstatic
-```
 
-## License
-
-No license file is currently included. Contact the project owner before redistributing or reusing this project.
